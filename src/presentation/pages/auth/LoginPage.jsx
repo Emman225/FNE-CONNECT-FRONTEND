@@ -16,8 +16,7 @@ const LoginPage = () => {
         // Simulate API call
         setTimeout(() => {
             setLoading(false);
-            // navigate('/dashboard'); // Uncomment if connected
-            alert('Connexion réussie (Simulation)');
+            navigate('/dashboard');
         }, 1500);
     };
 
