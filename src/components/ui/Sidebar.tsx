@@ -12,7 +12,7 @@ import { menuKeys, rolePermissions, userRoles, MenuKey, UserRole } from '../../t
 type MenuItem =
     | { type: 'header'; label: string; key: null; icon?: undefined; path?: undefined }
     | { type: 'separator'; label?: undefined; key: null; icon?: undefined; path?: undefined }
-    | { type?: undefined; icon: ReactNode; label: string; path: string; key: MenuKey };
+    | { type: 'link'; icon: ReactNode; label: string; path: string; key: MenuKey };
 
 /**
  * Sidebar Component with RBAC
@@ -37,7 +37,7 @@ const Sidebar = () => {
     const allMenuItems: MenuItem[] = [
         { type: 'header', label: 'PRINCIPAL', key: null },
         {
-            icon: <LayoutDashboard size={20} />,
+            type: 'link', icon: <LayoutDashboard size={20} />,
             label: 'Tableau de bord',
             path: `${basePath}`,
             key: menuKeys.DASHBOARD
@@ -45,25 +45,25 @@ const Sidebar = () => {
 
         { type: 'header', label: 'GESTION', key: null },
         {
-            icon: <Users size={20} />,
+            type: 'link', icon: <Users size={20} />,
             label: 'Clients',
             path: `${basePath}/clients`,
             key: menuKeys.CLIENTS
         },
         {
-            icon: <FileText size={20} />,
+            type: 'link', icon: <FileText size={20} />,
             label: 'Factures',
             path: `${basePath}/invoices`,
             key: menuKeys.INVOICES
         },
         {
-            icon: <FileText size={20} />,
+            type: 'link', icon: <FileText size={20} />,
             label: 'Devis',
             path: `${basePath}/quotes`,
             key: menuKeys.QUOTES
         },
         {
-            icon: <FileCheck size={20} />,
+            type: 'link', icon: <FileCheck size={20} />,
             label: 'Proformas',
             path: `${basePath}/proformas`,
             key: menuKeys.PROFORMAS
@@ -71,19 +71,19 @@ const Sidebar = () => {
 
         { type: 'header', label: 'FINANCE', key: null },
         {
-            icon: <CreditCard size={20} />,
+            type: 'link', icon: <CreditCard size={20} />,
             label: 'Paiements',
             path: `${basePath}/payments`,
             key: menuKeys.PAYMENTS
         },
         {
-            icon: <Wallet size={20} />,
+            type: 'link', icon: <Wallet size={20} />,
             label: 'Commissions',
             path: `${basePath}/commissions`,
             key: menuKeys.COMMISSIONS
         },
         {
-            icon: <TrendingUp size={20} />,
+            type: 'link', icon: <TrendingUp size={20} />,
             label: 'Reversements',
             path: `${basePath}/payouts`,
             key: menuKeys.PAYOUTS
@@ -91,13 +91,13 @@ const Sidebar = () => {
 
         { type: 'header', label: 'CONFORMITÉ', key: null },
         {
-            icon: <Shield size={20} />,
+            type: 'link', icon: <Shield size={20} />,
             label: 'Conformité AML',
             path: `${basePath}/compliance/aml`,
             key: menuKeys.CONFORMITE_AML
         },
         {
-            icon: <FileCheck size={20} />,
+            type: 'link', icon: <FileCheck size={20} />,
             label: 'Rapports DGI',
             path: `${basePath}/reports`,
             key: menuKeys.RAPPORTS_DGI
@@ -105,25 +105,25 @@ const Sidebar = () => {
 
         { type: 'header', label: 'ADMINISTRATION', key: null },
         {
-            icon: <UserCog size={20} />,
+            type: 'link', icon: <UserCog size={20} />,
             label: 'Gestion Utilisateurs',
             path: `${basePath}/users`,
             key: menuKeys.GESTION_UTILISATEURS
         },
         {
-            icon: <ShieldCheck size={20} />,
+            type: 'link', icon: <ShieldCheck size={20} />,
             label: 'Gestion Vendeurs',
             path: `${basePath}/vendors`,
             key: menuKeys.GESTION_VENDEURS
         },
         {
-            icon: <Settings size={20} />,
+            type: 'link', icon: <Settings size={20} />,
             label: 'Configuration',
             path: `${basePath}/config`,
             key: menuKeys.CONFIGURATION
         },
         {
-            icon: <TrendingUp size={20} />,
+            type: 'link', icon: <TrendingUp size={20} />,
             label: 'Reporting Global',
             path: `${basePath}/reporting`,
             key: menuKeys.REPORTING_GLOBAL
@@ -242,11 +242,13 @@ const Sidebar = () => {
                             );
                         }
 
+                        const linkItem = item as Extract<MenuItem, { type: 'link' }>;
+
                         return (
-                            <li key={item.path}>
+                            <li key={linkItem.path}>
                                 <NavLink
-                                    to={item.path!}
-                                    end={item.key === menuKeys.DASHBOARD}
+                                    to={linkItem.path}
+                                    end={linkItem.key === menuKeys.DASHBOARD}
                                     style={({ isActive }) => ({
                                         display: 'flex',
                                         alignItems: 'center',
@@ -277,9 +279,9 @@ const Sidebar = () => {
                                     }}
                                 >
                                     <span style={{ display: 'flex', alignItems: 'center', transition: 'transform var(--transition-normal)' }}>
-                                        {item.icon}
+                                        {linkItem.icon}
                                     </span>
-                                    {item.label}
+                                    {linkItem.label}
                                 </NavLink>
                             </li>
                         );

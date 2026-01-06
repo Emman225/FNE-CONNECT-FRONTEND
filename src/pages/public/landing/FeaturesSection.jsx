@@ -1,5 +1,6 @@
 import React from 'react';
 import { Zap, Shield, Smartphone, FileText, PieChart, Users } from 'lucide-react';
+import ppqncImage from '../../../assets/ppqnc.jpg';
 
 const FEATURE_ITEMS = [
     {
@@ -92,7 +93,7 @@ const FeaturesSection = () => {
                                 width: '320px',
                                 height: '320px',
                                 borderRadius: '50%',
-                                background: 'url(https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&q=80&w=1000)',
+                                background: `url(${ppqncImage})`,
                                 backgroundSize: 'cover',
                                 backgroundPosition: 'center',
                                 border: '8px solid white',
@@ -120,7 +121,6 @@ const FeaturesSection = () => {
                                         justifyContent: 'center',
                                         boxShadow: '0 0 30px rgba(0,0,0,0.2)'
                                     }}>
-                                        {/* Using Shield logo from lucide broadly or image if available. Reusing the icon style from Navbar */}
                                         <div style={{
                                             color: 'var(--primary)',
                                             transform: 'scale(2.2)'
@@ -131,7 +131,6 @@ const FeaturesSection = () => {
                                 </div>
                             </div>
 
-                            {/* Decorative Orbit/Circle behind */}
                             <div style={{
                                 position: 'absolute',
                                 width: '400px',
@@ -181,13 +180,12 @@ const FeaturesSection = () => {
 
                     {/* Mobile Layout (Stacked) */}
                     <div className="hide-on-desktop-flex" style={{ gap: '2rem', width: '100%' }}>
-                        {/* Image for mobile */}
                         <div style={{
                             width: '200px',
                             height: '200px',
                             borderRadius: '50%',
                             alignSelf: 'center',
-                            background: 'url(https://images.unsplash.com/photo-1600880292203-757bb62b4baf?auto=format&fit=crop&q=80&w=1000)',
+                            background: `url(${ppqncImage})`,
                             backgroundSize: 'cover',
                             backgroundPosition: 'center',
                             border: '5px solid white',
@@ -252,6 +250,12 @@ const FeaturesSection = () => {
 
                 </div>
             </div>
+            <style>{`
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+            `}</style>
         </section>
     );
 };

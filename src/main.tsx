@@ -14,7 +14,7 @@ if (!rootElement) throw new Error('Failed to find the root element');
 console.log('🚀 Main.tsx starting...');
 createRoot(rootElement).render(
   <StrictMode>
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
         <NotificationProvider>
           <App />

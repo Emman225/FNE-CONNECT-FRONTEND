@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import Card from '../../../components/ui/Card';
 import Button from '../../../components/ui/Button';
 import StatusBadge from '../../../app/shared/features/documents/StatusBadge';
+import { useNavigate } from 'react-router-dom';
 import { Users, Search, Filter, Download, Eye, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useNotifications } from '../../../context/NotificationContext';
 
 const VendorManagementPage = () => {
+    const navigate = useNavigate();
     const { showSuccess, showWarning } = useNotifications();
 
     // Mock vendor data
@@ -114,6 +116,13 @@ const VendorManagementPage = () => {
                     <p className="text-muted">Gérez les vendeurs, validez les KYC et surveillez l'activité.</p>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem' }}>
+                    <button
+                        onClick={() => navigate('/admin/dashboard/users/new')}
+                        className="btn btn-primary"
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                    >
+                        <Users size={18} /> Ajouter un Vendeur
+                    </button>
                     <button className="btn btn-light" style={{ border: '1px solid var(--border-color)' }}>
                         <Download size={18} /> Exporter
                     </button>

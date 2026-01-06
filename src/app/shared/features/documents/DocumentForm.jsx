@@ -10,24 +10,70 @@ const DocumentForm = ({ type = 'invoice', isPublic = false }) => {
     const navigate = useNavigate();
     const isQuote = type === 'quote';
 
-    const [client, setClient] = useState({ name: '', phone: '', email: '' });
-    const [serviceType, setServiceType] = useState('Vente d\'attente d\'article');
-    const [regime, setRegime] = useState('Réel normal');
+    const [client, setClient] = useState({
+        name: '',
+        phone: '',
+        email: '',
+        address: '',
+        ncc: '',
+        regime: 'Particulier'
+    });
+
+    const [docInfo, setDocInfo] = useState({
+        date: new Date().toISOString().split('T')[0],
+        reference: `INV-${Math.floor(Date.now() / 1000)}`,
+        paymentMode: 'Virement',
+        pdv: 'SIEGE' // Point de Vente
+    });
+
+    const [serviceType, setServiceType] = useState('Prestation de service');
     const [contractFile, setContractFile] = useState(null);
-    const [items, setItems] = useState([{ id: 1, name: '', quantity: 1, price: 0 }]);
-    const [config, setConfig] = useState({ applyTva: false, applyAirsi: false });
-    const [validity, setValidity] = useState('30 jours'); // For quotes
+    const [items, setItems] = useState([{
+        id: 1,
+        ref: '',
+        name: '',
+        quantity: 1,
+        unit: 'JOURS',
+        price: 0,
+        discount: 0,
+        tva: 18
+    }]);
+
+    const [config, setConfig] = useState({ applyAirsi: false });
+    const [validity, setValidity] = useState('30 jours');
     const [totals, setTotals] = useState({ totalHT: 0, tvaAmount: 0, totalTTC: 0, airsiAmount: 0, netToPay: 0 });
 
-    const isComplete = client.name && client.phone && items.every(i => i.name && i.quantity > 0 && i.price > 0);
+    const isComplete = client.name && client.ncc && items.every(i => i.name && i.quantity > 0 && i.price > 0);
 
     useEffect(() => {
-        const t = calculateInvoiceTotals(items, config.applyTva, config.applyAirsi);
-        setTotals(t);
+        // Updated calculation logic integrating per-item tva and global airsi
+        let totalHT = 0;
+        let totalTVA = 0;
+
+        items.forEach(item => {
+            const lineHT = (item.quantity * item.price) * (1 - (item.discount / 100));
+            totalHT += lineHT;
+            totalTVA += lineHT * (item.tva / 100);
+        });
+
+        const airsiAmount = config.applyAirsi ? (totalHT * 0.05) : 0;
+        const totalTTC = totalHT + totalTVA;
+        const netToPay = totalTTC + airsiAmount;
+
+        setTotals({ totalHT, tvaAmount: totalTVA, totalTTC, airsiAmount, netToPay });
     }, [items, config]);
 
     const addItem = () => {
-        setItems([...items, { id: Date.now(), name: '', quantity: 1, price: 0 }]);
+        setItems([...items, {
+            id: Date.now(),
+            ref: '',
+            name: '',
+            quantity: 1,
+            unit: 'JOURS',
+            price: 0,
+            discount: 0,
+            tva: 18
+        }]);
     };
 
     const removeItem = (id) => {
@@ -48,17 +94,25 @@ const DocumentForm = ({ type = 'invoice', isPublic = false }) => {
             return;
         }
 
-        const message = isQuote ? 'Devis créé avec succès !' : 'Facture créée avec succès !';
-        alert(message);
-        navigate(isQuote ? '/dashboard/quotes' : '/dashboard/invoices');
+        const fullDoc = {
+            ...docInfo,
+            type,
+            client,
+            items,
+            totals,
+            serviceType,
+            validity: isQuote ? validity : null
+        };
+
+        console.log('FNE Data Payload:', fullDoc);
+        alert(`${isQuote ? 'Devis' : (type === 'proforma' ? 'Facture Proforma' : 'Facture')} générée. Transmission aux services FNE...`);
+        navigate(type === 'quote' ? '/dashboard/quotes' : (type === 'proforma' ? '/dashboard/proformas' : '/dashboard/invoices'));
     };
 
-    // MOCK CLIENTS DATA for Invoice Form
+    // MOCK CLIENTS DATA based on FNE examples
     const MOCK_CLIENTS = [
-        { id: 1, name: 'Jean Doe', phone: '0708091011', email: 'jean@gmail.com' },
-        { id: 2, name: 'Entreprise ABC', phone: '0102030405', email: 'contact@abc.ci' },
-        { id: 3, name: 'Marc Konan', phone: '0505050505', email: '' },
-        { id: 4, name: 'Sarah Koffi', phone: '0707070707', email: 'sarah@koffi.com' }
+        { id: 1, name: 'AFRICA PROJECT MANAGEMENT', ncc: '1339220 N', phone: '0707070707', email: 'k.dibi@apm.ci', address: 'Abidjan, Riviera' },
+        { id: 2, name: 'SITE COTE D\'IVOIRE', ncc: '1441119U', phone: '0704729820', email: 'loss4fr@yahoo.fr', address: 'BP 3321 ABIDJAN' },
     ];
 
     const handleClientChange = (e) => {
@@ -68,19 +122,21 @@ const DocumentForm = ({ type = 'invoice', isPublic = false }) => {
         if (selectedClient) {
             setClient({
                 name: selectedClient.name,
+                ncc: selectedClient.ncc,
                 phone: selectedClient.phone,
-                email: selectedClient.email || ''
+                email: selectedClient.email || '',
+                address: selectedClient.address || '',
+                regime: 'TEE' // Default for company mock
             });
-        } else {
-            setClient({ ...client, name: clientName });
         }
     };
 
     return (
         <form onSubmit={handleSubmit} style={{
-            maxWidth: '1200px',
+            maxWidth: '1600px',
             margin: '0 auto',
-            position: 'relative'
+            position: 'relative',
+            padding: '0 1rem'
         }}>
             {isPublic && (
                 <div style={{
@@ -100,153 +156,114 @@ const DocumentForm = ({ type = 'invoice', isPublic = false }) => {
                     Brouillon
                 </div>
             )}
-            <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '2rem', alignItems: 'start' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(12, 1fr)', gap: '2rem', alignItems: 'start' }}>
 
-                {/* Main Form Area */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+                {/* Left Side: Header & Client (Grid span 8) */}
+                <div style={{ gridColumn: 'span 8', display: 'flex', flexDirection: 'column', gap: '2rem' }}>
 
-                    {/* Client Section */}
-                    <Card style={{ padding: '1.5rem' }}>
-                        <h3 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', fontWeight: '700', color: 'var(--text-main)' }}>Informations Client</h3>
+                    {/* Header Facture */}
+                    <Card style={{ padding: '1.5rem', borderLeft: '4px solid var(--primary)' }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                            <div className="flex flex-col gap-1 w-full" style={{ marginBottom: '1rem' }}>
-                                <label style={{ fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-main)', display: 'block' }}>Nom du client</label>
-                                <select className="input-field" value={client.name} onChange={handleClientChange} style={{ width: '100%', height: '46px', backgroundColor: 'white' }} required>
-                                    <option value="">Sélectionner un client</option>
-                                    {MOCK_CLIENTS.map((c) => (
-                                        <option key={c.id} value={c.name}>{c.name}</option>
-                                    ))}
+                            <Input
+                                label="N° Pièce (ID FNE)"
+                                value={docInfo.reference}
+                                onChange={(e) => setDocInfo({ ...docInfo, reference: e.target.value })}
+                            />
+                            <div className="flex flex-col gap-1">
+                                <label style={{ fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>Mode de Paiement</label>
+                                <select className="input-field" value={docInfo.paymentMode} onChange={(e) => setDocInfo({ ...docInfo, paymentMode: e.target.value })} style={{ backgroundColor: 'white' }}>
+                                    <option value="Virement">Virement</option>
+                                    <option value="Espèces">Espèces</option>
+                                    <option value="Chèque">Chèque</option>
+                                    <option value="Mobile Money">Mobile Money</option>
+                                </select>
+                            </div>
+                        </div>
+                    </Card>
+
+                    {/* Client (Standard FNE) */}
+                    <Card style={{ padding: '1.5rem' }}>
+                        <h3 style={{ fontSize: '1.1rem', fontWeight: '700', marginBottom: '1.5rem' }}>Informations Client (Obligatoires FNE)</h3>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1rem' }}>
+                            <div className="flex flex-col gap-1">
+                                <label style={{ fontSize: '0.875rem', fontWeight: '500' }}>Sélectionner Client</label>
+                                <select className="input-field" onChange={handleClientChange} style={{ backgroundColor: 'white' }}>
+                                    <option value="">-- Nouveau Client / Autre --</option>
+                                    {MOCK_CLIENTS.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                                 </select>
                             </div>
                             <Input
-                                label="Téléphone"
-                                placeholder="+225..."
-                                value={client.phone}
-                                onChange={(e) => setClient({ ...client, phone: e.target.value })}
+                                label="Nom / Raison Sociale"
+                                value={client.name}
+                                onChange={(e) => setClient({ ...client, name: e.target.value })}
+                                required
                             />
                         </div>
-                        {isQuote && (
-                            <div style={{ marginTop: '1.5rem' }}>
-                                <Input
-                                    label="Validité de l'offre"
-                                    value={validity}
-                                    onChange={(e) => setValidity(e.target.value)}
-                                />
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1rem' }}>
+                            <Input
+                                label="NCC (Numéro de Compte Contribuable)"
+                                placeholder="Ex: 1234567 A"
+                                value={client.ncc}
+                                onChange={(e) => setClient({ ...client, ncc: e.target.value })}
+                                required
+                            />
+                            <div className="flex flex-col gap-1">
+                                <label style={{ fontSize: '0.875rem', fontWeight: '500' }}>Régime d'Imposition</label>
+                                <select className="input-field" value={client.regime} onChange={(e) => setClient({ ...client, regime: e.target.value })} style={{ backgroundColor: 'white' }}>
+                                    <option value="TEE">TEE</option>
+                                    <option value="Réel Normal">Réel Normal</option>
+                                    <option value="Réel Simplifié">Réel Simplifié</option>
+                                    <option value="Microentreprise">Microentreprise</option>
+                                    <option value="Particulier">Particulier</option>
+                                </select>
                             </div>
-                        )}
-                    </Card>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1rem' }}>
+                            <Input
+                                label="Téléphone / E-mail"
+                                value={client.phone || client.email}
+                                placeholder="Contact..."
+                                onChange={(e) => setClient({ ...client, phone: e.target.value })}
+                            />
+                            <Input
+                                label="Adresse / Localisation"
+                                value={client.address}
+                                placeholder="Abidjan, CI..."
+                                onChange={(e) => setClient({ ...client, address: e.target.value })}
+                            />
+                        </div>
 
-                    {/* Fiscal & Service Section (Commented out for quotes) */}
-                    {!isQuote && (
-                        <Card style={{ padding: '1.5rem' }}>
-                            <h3 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', fontWeight: '700', color: 'var(--text-main)' }}>Détails de la Facturation</h3>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-                                <div className="flex flex-col gap-1 w-full" style={{ marginBottom: '1rem' }}>
-                                    <label style={{ fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-main)', display: 'block' }}>Type de service</label>
-                                    <select className="input-field" value={serviceType} onChange={(e) => setServiceType(e.target.value)} style={{ width: '100%', height: '46px', backgroundColor: 'white' }}>
-                                        <option value="Vente d'attente d'article">Vente d'attente d'article</option>
-                                        <option value="Prestation de service">Prestation de service</option>
-                                    </select>
-                                </div>
-                                <div className="flex flex-col gap-1 w-full" style={{ marginBottom: '1rem' }}>
-                                    <label style={{ fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-main)', display: 'block' }}>Régime fiscal</label>
-                                    <select className="input-field" value={regime} onChange={(e) => setRegime(e.target.value)} style={{ width: '100%', height: '46px', backgroundColor: 'white' }}>
-                                        <option value="Entreprenant">Entreprenant</option>
-                                        <option value="Micros-entreprise">Micros-entreprise</option>
-                                        <option value="Particulier">Particulier</option>
-                                        <option value="Réel simplifié">Réel simplifié</option>
-                                        <option value="Réel normal">Réel normal</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div style={{ marginTop: '0.5rem' }}>
-                                <label style={{ fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-main)', display: 'block' }}>Contrat ou Bon de commande (PDF, Image)</label>
+                        {!isQuote && (
+                            <div style={{ marginTop: '0.5rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
+                                <label style={{ fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.8rem', display: 'block' }}>Bon de commande / Contrat joint</label>
                                 <div style={{
                                     border: '2px dashed var(--border-color)',
                                     borderRadius: 'var(--radius-md)',
-                                    padding: '1.5rem',
+                                    padding: '1rem',
                                     textAlign: 'center',
                                     cursor: 'pointer',
-                                    transition: 'all 0.2s',
                                     backgroundColor: 'var(--bg-main)'
                                 }}
-                                    onMouseEnter={e => e.currentTarget.style.borderColor = 'var(--primary)'}
-                                    onMouseLeave={e => e.currentTarget.style.borderColor = 'var(--border-color)'}
                                     onClick={() => document.getElementById('contract-upload').click()}
                                 >
-                                    <Input
+                                    <input
                                         id="contract-upload"
                                         type="file"
                                         style={{ display: 'none' }}
                                         onChange={(e) => setContractFile(e.target.files[0])}
                                     />
-                                    <div style={{ color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem' }}>
-                                        <Plus size={24} />
-                                        <span>{contractFile ? contractFile.name : 'Cliquez pour uploader le document'}</span>
+                                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>
+                                        {contractFile ? contractFile.name : 'Joindre un document (Optionnel)'}
                                     </div>
                                 </div>
                             </div>
-                        </Card>
-                    )}
-
-                    {/* Items Section */}
-                    <Card style={{ padding: '1.5rem' }}>
-                        <div className="flex-between" style={{ marginBottom: '1.5rem' }}>
-                            <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--text-main)' }}>Articles & Prestations</h3>
-                            <button type="button" onClick={addItem} className="btn-secondary" style={{ padding: '0.4rem 0.8rem', fontSize: '0.85rem' }}>
-                                <Plus size={16} /> Ajouter
-                            </button>
-                        </div>
-
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                            <div style={{ display: 'grid', gridTemplateColumns: '3fr 0.8fr 1.5fr 0.5fr', gap: '1rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-color)', fontSize: '0.8rem', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>
-                                <div>Description</div>
-                                <div>Qté</div>
-                                <div>Prix Unitaire</div>
-                                <div></div>
-                            </div>
-                            {items.map((item, index) => (
-                                <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '3fr 0.8fr 1.5fr 0.5fr', gap: '1rem', alignItems: 'center' }}>
-                                    <Input
-                                        placeholder="Désignation"
-                                        value={item.name}
-                                        onChange={(e) => updateItem(item.id, 'name', e.target.value)}
-                                        required
-                                        style={{ marginBottom: 0 }}
-                                    />
-                                    <Input
-                                        type="number"
-                                        min="1"
-                                        value={item.quantity}
-                                        onChange={(e) => updateItem(item.id, 'quantity', parseInt(e.target.value) || 0)}
-                                        required
-                                        style={{ marginBottom: 0 }}
-                                    />
-                                    <Input
-                                        type="number"
-                                        min="0"
-                                        value={item.price}
-                                        onChange={(e) => updateItem(item.id, 'price', parseInt(e.target.value) || 0)}
-                                        required
-                                        style={{ marginBottom: 0 }}
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => removeItem(item.id)}
-                                        className="btn-icon"
-                                        style={{ color: 'var(--danger)', alignSelf: 'center', justifySelf: 'center' }}
-                                    >
-                                        <Trash2 size={18} />
-                                    </button>
-                                </div>
-                            ))}
-                        </div>
+                        )}
                     </Card>
                 </div>
 
-                {/* Sidebar Area (Totals & Actions) */}
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                    <Card style={{ padding: '1.5rem', position: 'sticky', top: '2rem' }}>
+                {/* Right Side: Totals (Grid span 4) */}
+                <div style={{ gridColumn: 'span 4', position: 'sticky', top: '2rem' }}>
+                    <Card style={{ padding: '1.5rem' }}>
                         <h3 style={{ fontSize: '1.25rem', marginBottom: '1.5rem', fontWeight: '700', color: 'var(--text-main)' }}>Résumé</h3>
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem', fontSize: '0.925rem' }}>
@@ -292,16 +309,58 @@ const DocumentForm = ({ type = 'invoice', isPublic = false }) => {
                             {!isPublic && (
                                 <button
                                     type="button"
-                                    onClick={() => {
-                                        alert('Brouillon enregistré avec succès !');
-                                        navigate(isQuote ? '/dashboard/quotes' : '/dashboard/invoices');
-                                    }}
+                                    onClick={() => alert('Brouillon enregistré avec succès !')}
                                     className="btn btn-light"
                                     style={{ width: '100%', justifyContent: 'center', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', backgroundColor: 'white' }}
                                 >
                                     <Save size={18} /> Enregistrer brouillon
                                 </button>
                             )}
+                        </div>
+                    </Card>
+                </div>
+
+                {/* Bottom Part: Item Table (Full Width - Grid span 12) */}
+                <div style={{ gridColumn: 'span 12', marginTop: '1rem' }}>
+                    <Card style={{ padding: '2rem' }}>
+                        <div className="flex-between" style={{ marginBottom: '1.5rem' }}>
+                            <h3 style={{ fontSize: '1.3rem', fontWeight: '800', color: 'var(--primary)' }}>Détails de la Vente</h3>
+                            <button type="button" onClick={addItem} className="btn-secondary" style={{ padding: '0.6rem 1rem' }}><Plus size={18} /> Ajouter une ligne</button>
+                        </div>
+
+                        <div style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', overflow: 'hidden' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 4.5fr 1.5fr 0.8fr 1.2fr 0.8fr 0.8fr 0.5fr', gap: '1rem', padding: '1.25rem 1.5rem', backgroundColor: 'var(--bg-main)', borderBottom: '2px solid var(--border-color)', fontSize: '0.8rem', fontWeight: '800', textTransform: 'uppercase', color: 'var(--text-main)', textAlign: 'center' }}>
+                                <div>Réf</div>
+                                <div style={{ textAlign: 'left' }}>Désignation</div>
+                                <div>P.U HT (FCFA)</div>
+                                <div>Qté</div>
+                                <div>Unité</div>
+                                <div>TVA (%)</div>
+                                <div>Rem (%)</div>
+                                <div></div>
+                            </div>
+                            <div style={{ backgroundColor: 'white' }}>
+                                {items.map((item) => (
+                                    <div key={item.id} style={{ display: 'grid', gridTemplateColumns: '1fr 4.5fr 1.5fr 0.8fr 1.2fr 0.8fr 0.8fr 0.5fr', gap: '1rem', alignItems: 'center', padding: '1.25rem 1.5rem', borderBottom: '1px solid var(--border-color)' }}>
+                                        <Input value={item.ref} onChange={(e) => updateItem(item.id, 'ref', e.target.value)} style={{ marginBottom: 0 }} placeholder="REF" />
+                                        <Input value={item.name} onChange={(e) => updateItem(item.id, 'name', e.target.value)} style={{ marginBottom: 0 }} placeholder="Description de l'article ou service..." required />
+                                        <Input type="number" value={item.price} onChange={(e) => updateItem(item.id, 'price', e.target.value)} style={{ marginBottom: 0, textAlign: 'right' }} />
+                                        <Input type="number" value={item.quantity} onChange={(e) => updateItem(item.id, 'quantity', e.target.value)} style={{ marginBottom: 0, textAlign: 'center' }} />
+                                        <div className="flex flex-col">
+                                            <select className="input-field" value={item.unit} onChange={(e) => updateItem(item.id, 'unit', e.target.value)} style={{ height: '46px', backgroundColor: 'white', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+                                                <option value="JOURS">JOURS</option>
+                                                <option value="MOIS">MOIS</option>
+                                                <option value="FORFAIT">FORFAIT</option>
+                                            </select>
+                                        </div>
+                                        <Input type="number" value={item.tva} onChange={(e) => updateItem(item.id, 'tva', e.target.value)} style={{ marginBottom: 0, textAlign: 'center' }} />
+                                        <Input type="number" value={item.discount} onChange={(e) => updateItem(item.id, 'discount', e.target.value)} style={{ marginBottom: 0, textAlign: 'center' }} />
+                                        <button type="button" onClick={() => removeItem(item.id)} className="hover-lift" style={{ color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', display: 'flex', justifyContent: 'center' }}>
+                                            <Trash2 size={22} />
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </Card>
                 </div>

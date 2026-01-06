@@ -1,230 +1,312 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Sparkles, ShieldCheck, ArrowUpRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-
-const SLIDES = [
-    {
-        id: 1,
-        image: 'linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=2070)',
-        title: "Bienvenue sur le portail FNE",
-        subtitle: "(Facture Normalisée Electronique)",
-        description: "L'objectif de ce portail est de diffuser des informations sur le système de Facturation Normalisée Electronique (FNE) et de faciliter vos démarches.",
-        primaryBtn: "Voir plus",
-        secondaryBtn: "Contact"
-    },
-    {
-        id: 2,
-        image: 'linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&q=80&w=2070)',
-        title: "Simplifiez votre gestion",
-        subtitle: "Une plateforme sécurisée",
-        description: "Accédez à tous vos services de facturation en un seul endroit. Sécurité, rapidité et fiabilité pour votre entreprise.",
-        primaryBtn: "S'inscrire",
-        secondaryBtn: "En savoir plus"
-    },
-    {
-        id: 3,
-        image: 'linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url(https://images.unsplash.com/photo-1551434678-e076c223a692?auto=format&fit=crop&q=80&w=2070)',
-        title: "Support dédié",
-        subtitle: "Nous sommes là pour vous",
-        description: "Une équipe d'experts à votre écoute pour vous accompagner dans la transition vers la facturation électronique.",
-        primaryBtn: "FAQ",
-        secondaryBtn: "Nous écrire"
-    }
-];
 
 const HeroSlider = () => {
     const [currentSlide, setCurrentSlide] = useState(0);
+    const [isHovering, setIsHovering] = useState(false);
     const navigate = useNavigate();
 
     const SLIDES = [
         {
             id: 1,
-            // Gradient combining Corporate Blue and FNE Green for the overlay
-            image: 'linear-gradient(135deg, rgba(30, 63, 166, 0.85), rgba(25, 134, 83, 0.75)), url(https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=2070)',
-            title: "L'Excellence Fiscale Numérique",
-            subtitle: "Facturation Normalisée & Sécurisée - Agréé DGI",
-            description: "Propulsez votre entreprise vers de nouveaux standards de performance. Une solution technologique de pointe pour une conformité totale.",
+            image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&q=80&w=2070',
+            gradient: 'linear-gradient(to right, rgba(1, 33, 67, 0.95), rgba(1, 33, 67, 0.4))',
+            title: "L'Excellence <br /><span style='color: var(--primary-light)'>Fiscale Numérique</span>",
+            subtitle: "Facturation Normalisée - Agréé DGI",
+            description: "Propulsez votre entreprise vers de nouveaux standards de performance avec une conformité totale et sécurisée.",
             primaryBtn: "Démarrer maintenant",
-            secondaryBtn: "Nous contacter"
+            secondaryBtn: "Nous contacter",
+            tag: "INNOVATION"
         },
         {
             id: 2,
-            image: 'linear-gradient(135deg, rgba(25, 134, 83, 0.85), rgba(30, 63, 166, 0.75)), url(https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1920&q=80)',
-            title: "Pilotage & Intelligence",
+            image: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&w=1920&q=80',
+            gradient: 'linear-gradient(to right, rgba(6, 78, 59, 0.95), rgba(6, 78, 59, 0.4))',
+            title: "Pilotage & <br /><span style='color: #10b981'>Intelligence</span>",
             subtitle: "Tableaux de Bord Décisionnels",
-            description: "Transformez vos données en levier de croissance. Visualisez en temps réel votre santé financière et anticipez l'avenir.",
+            description: "Transformez vos données en levier de croissance. Visualisez en temps réel votre santé financière.",
             primaryBtn: "Découvrir la solution",
-            secondaryBtn: "Voir la démo"
+            secondaryBtn: "Voir la démo",
+            tag: "ANALYTICS"
         },
         {
             id: 3,
-            image: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 63, 166, 0.8)), url(https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=2015)',
-            title: "Infrastructure Robuste",
+            image: 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=2015',
+            gradient: 'linear-gradient(to right, rgba(15, 23, 42, 0.95), rgba(15, 23, 42, 0.4))',
+            title: "Infrastructure <br /><span style='color: var(--primary-light)'>Robuste</span>",
             subtitle: "Sécurité Bancaire & Haute Disponibilité",
-            description: "Vos données méritent le plus haut niveau de protection. Hébergement sécurisé et archivage probant garanti sur 10 ans.",
+            description: "Hébergement hautement sécurisé et archivage légal garanti sur 10 ans pour votre sérénité totale.",
             primaryBtn: "En savoir plus",
-            secondaryBtn: "Contacter le support"
+            secondaryBtn: "Support technique",
+            tag: "SÉCURITÉ"
         }
     ];
 
     useEffect(() => {
-        const timer = setInterval(() => {
-            setCurrentSlide((prev) => (prev + 1) % SLIDES.length);
-        }, 6000);
-        return () => clearInterval(timer);
-    }, [SLIDES.length]);
+        if (!isHovering) {
+            const timer = setInterval(() => {
+                setCurrentSlide((prev) => (prev + 1) % SLIDES.length);
+            }, 7000);
+            return () => clearInterval(timer);
+        }
+    }, [isHovering]);
 
     const nextSlide = () => setCurrentSlide((prev) => (prev + 1) % SLIDES.length);
     const prevSlide = () => setCurrentSlide((prev) => (prev - 1 + SLIDES.length) % SLIDES.length);
 
     return (
-        <div style={{ position: 'relative', height: '500px', overflow: 'hidden', width: '100%' }}>
+        <div
+            onMouseEnter={() => setIsHovering(true)}
+            onMouseLeave={() => setIsHovering(false)}
+            style={{ position: 'relative', height: '100vh', maxHeight: '800px', overflow: 'hidden', width: '100%', background: '#012143' }}
+        >
             {SLIDES.map((slide, index) => (
                 <div
                     key={slide.id}
                     style={{
                         position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
+                        inset: 0,
                         opacity: index === currentSlide ? 1 : 0,
-                        transition: 'opacity 1.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                        background: slide.image,
-                        backgroundSize: 'cover',
-                        backgroundPosition: 'center',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
+                        visibility: index === currentSlide ? 'visible' : 'hidden',
+                        transition: 'opacity 1.5s cubic-bezier(0.4, 0, 0.2, 1), visibility 1.5s',
+                        zIndex: index === currentSlide ? 1 : 0
                     }}
                 >
-                    <div className="container" style={{ position: 'relative', zIndex: 10, color: 'white' }}>
-                        <div style={{ maxWidth: '900px', margin: '0 0 0 auto', textAlign: 'right' }}> {/* Aligned right for premium feel */}
+                    {/* Ken Burns Effect Image */}
+                    <div style={{
+                        position: 'absolute',
+                        inset: 0,
+                        backgroundImage: `url(${slide.image})`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                        transform: index === currentSlide ? 'scale(1.1)' : 'scale(1)',
+                        transition: 'transform 10s linear',
+                        zIndex: 0
+                    }} />
+
+                    {/* Gradient Overlay */}
+                    <div style={{
+                        position: 'absolute',
+                        inset: 0,
+                        background: slide.gradient,
+                        zIndex: 1
+                    }} />
+
+                    {/* Decorative Elements */}
+                    <div style={{
+                        position: 'absolute',
+                        top: '10%',
+                        right: '5%',
+                        width: '500px',
+                        height: '500px',
+                        background: 'radial-gradient(circle, rgba(59, 130, 246, 0.1) 0%, transparent 70%)',
+                        borderRadius: '50%',
+                        zIndex: 2,
+                        filter: 'blur(30px)'
+                    }} />
+
+                    <div className="container" style={{ position: 'relative', height: '100%', zIndex: 10, display: 'flex', alignItems: 'center' }}>
+                        <div style={{ maxWidth: '800px', textAlign: 'left' }}>
                             <div style={{
-                                display: 'inline-block',
-                                background: 'transparent',
-                                padding: '1rem',
-                                textShadow: '0 2px 10px rgba(0,0,0,0.3)'
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '1rem',
+                                marginBottom: '2rem',
+                                transform: index === currentSlide ? 'translateX(0)' : 'translateX(-50px)',
+                                opacity: index === currentSlide ? 1 : 0,
+                                transition: 'all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.3s'
                             }}>
-                                <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: 'var(--accent)', marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '2px' }}>
-                                    {slide.subtitle}
-                                </h2>
-                                <h1 style={{ fontSize: '3.5rem', fontWeight: '800', lineHeight: 1.1, marginBottom: '1rem', fontFamily: "'Playfair Display', serif" }}>
-                                    {slide.title}
-                                </h1>
-                                <p style={{ fontSize: '1.25rem', marginBottom: '2rem', opacity: 0.95, lineHeight: 1.6, maxWidth: '650px', marginLeft: 'auto', fontWeight: '300' }}>
-                                    {slide.description}
-                                </p>
-                                <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
-                                    <button
-                                        className="btn"
-                                        style={{
-                                            background: '#10b981',
-                                            color: 'white',
-                                            padding: '0.75rem 2rem',
-                                            fontSize: '1rem',
-                                            border: 'none',
-                                            fontWeight: '600',
-                                            borderRadius: '9999px', // Fully rounded
-                                            boxShadow: '0 4px 15px rgba(0,0,0,0.2)'
-                                        }}
-                                        onClick={() => navigate('/auth/register')}
-                                    >
-                                        {slide.primaryBtn}
-                                    </button>
-                                    <button
-                                        className="btn"
-                                        style={{
-                                            background: 'white', // No longer transparent
-                                            color: 'var(--primary)',
-                                            padding: '0.75rem 2rem',
-                                            fontSize: '1rem',
-                                            border: 'none',
-                                            fontWeight: '600',
-                                            borderRadius: '9999px', // Fully rounded
-                                            boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
-                                        }}
-                                        onClick={() => navigate('/contact')}
-                                    >
-                                        {slide.secondaryBtn}
-                                    </button>
-                                </div>
+                                <span style={{
+                                    background: 'rgba(255,255,255,0.1)',
+                                    backdropFilter: 'blur(10px)',
+                                    border: '1px solid rgba(255,255,255,0.2)',
+                                    padding: '0.6rem 1.25rem',
+                                    borderRadius: '50px',
+                                    fontSize: '0.85rem',
+                                    fontWeight: '700',
+                                    letterSpacing: '2px',
+                                    color: 'white',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem'
+                                }}>
+                                    <Sparkles size={14} color="#10b981" /> {slide.tag}
+                                </span>
+                                <div style={{ width: '60px', height: '1px', background: 'rgba(255,255,255,0.3)' }}></div>
+                            </div>
+
+                            <h1
+                                style={{
+                                    fontSize: '5rem',
+                                    fontWeight: '900',
+                                    lineHeight: 1.1,
+                                    marginBottom: '1.5rem',
+                                    color: 'white',
+                                    transform: index === currentSlide ? 'translateY(0)' : 'translateY(30px)',
+                                    opacity: index === currentSlide ? 1 : 0,
+                                    transition: 'all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.4s'
+                                }}
+                                dangerouslySetInnerHTML={{ __html: slide.title }}
+                            />
+
+                            <h2 style={{
+                                fontSize: '1.5rem',
+                                fontWeight: '500',
+                                color: 'rgba(255,255,255,0.8)',
+                                marginBottom: '2rem',
+                                transform: index === currentSlide ? 'translateY(0)' : 'translateY(20px)',
+                                opacity: index === currentSlide ? 1 : 0,
+                                transition: 'all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.5s',
+                                letterSpacing: '0.5px'
+                            }}>
+                                {slide.subtitle}
+                            </h2>
+
+                            <p style={{
+                                fontSize: '1.25rem',
+                                marginBottom: '3.5rem',
+                                color: 'rgba(255,255,255,0.7)',
+                                lineHeight: 1.8,
+                                maxWidth: '600px',
+                                transform: index === currentSlide ? 'translateY(0)' : 'translateY(20px)',
+                                opacity: index === currentSlide ? 1 : 0,
+                                transition: 'all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.6s'
+                            }}>
+                                {slide.description}
+                            </p>
+
+                            <div style={{
+                                display: 'flex',
+                                gap: '1.5rem',
+                                transform: index === currentSlide ? 'translateY(0)' : 'translateY(20px)',
+                                opacity: index === currentSlide ? 1 : 0,
+                                transition: 'all 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) 0.7s'
+                            }}>
+                                <button
+                                    className="hover-lift"
+                                    style={{
+                                        background: 'var(--primary)',
+                                        color: 'white',
+                                        padding: '1.25rem 3rem',
+                                        fontSize: '1.1rem',
+                                        border: 'none',
+                                        fontWeight: '800',
+                                        borderRadius: '1.25rem',
+                                        boxShadow: '0 20px 40px rgba(16, 185, 129, 0.3)',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.75rem'
+                                    }}
+                                    onClick={() => navigate('/auth/register')}
+                                >
+                                    {slide.primaryBtn} <ArrowUpRight size={20} />
+                                </button>
+                                <button
+                                    className="hover-lift"
+                                    style={{
+                                        background: 'rgba(255,255,255,0.1)',
+                                        backdropFilter: 'blur(10px)',
+                                        color: 'white',
+                                        padding: '1.25rem 3rem',
+                                        fontSize: '1.1rem',
+                                        border: '1px solid rgba(255,255,255,0.2)',
+                                        fontWeight: '700',
+                                        borderRadius: '1.25rem',
+                                        cursor: 'pointer'
+                                    }}
+                                    onClick={() => navigate('/contact')}
+                                >
+                                    {slide.secondaryBtn}
+                                </button>
                             </div>
                         </div>
                     </div>
                 </div>
             ))}
 
-            {/* Navigation Buttons */}
-            <button
-                onClick={prevSlide}
-                style={{
-                    position: 'absolute',
-                    left: '2rem',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'rgba(255,255,255,0.05)',
-                    backdropFilter: 'blur(5px)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    color: 'white',
-                    padding: '1rem',
-                    borderRadius: '50%',
-                    cursor: 'pointer',
-                    zIndex: 20,
-                    transition: 'all 0.3s'
-                }}
-                className="hover-scale"
-            >
-                <ArrowLeft size={24} />
-            </button>
-            <button
-                onClick={nextSlide}
-                style={{
-                    position: 'absolute',
-                    right: '2rem',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'rgba(255,255,255,0.05)',
-                    backdropFilter: 'blur(5px)',
-                    border: '1px solid rgba(255,255,255,0.1)',
-                    color: 'white',
-                    padding: '1rem',
-                    borderRadius: '50%',
-                    cursor: 'pointer',
-                    zIndex: 20,
-                    transition: 'all 0.3s'
-                }}
-                className="hover-scale"
-            >
-                <ArrowRight size={24} />
-            </button>
-
-
-            {/* Dots */}
+            {/* Navigation Overlay */}
             <div style={{
                 position: 'absolute',
-                bottom: '2rem',
-                left: '2rem', // Aligned left instead of center
+                bottom: '3rem',
+                right: '5%',
                 display: 'flex',
-                gap: '0.75rem',
-                zIndex: 20
+                alignItems: 'center',
+                gap: '2rem',
+                zIndex: 30
             }}>
-                {SLIDES.map((_, index) => (
+                <div style={{ display: 'flex', gap: '1rem' }}>
                     <button
-                        key={index}
-                        onClick={() => setCurrentSlide(index)}
+                        onClick={prevSlide}
                         style={{
-                            width: index === currentSlide ? '30px' : '10px', // Elongated active dot
-                            height: '4px', // Bar style instead of dots
-                            borderRadius: '2px',
-                            background: index === currentSlide ? 'var(--accent)' : 'rgba(255,255,255,0.3)',
-                            border: 'none',
+                            width: '60px',
+                            height: '60px',
+                            borderRadius: '50%',
+                            background: 'rgba(255,255,255,0.05)',
+                            backdropFilter: 'blur(10px)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            color: 'white',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                             cursor: 'pointer',
                             transition: 'all 0.3s'
                         }}
-                    />
-                ))}
+                        className="hover-lift"
+                    >
+                        <ArrowLeft size={24} />
+                    </button>
+                    <button
+                        onClick={nextSlide}
+                        style={{
+                            width: '60px',
+                            height: '60px',
+                            borderRadius: '50%',
+                            background: 'rgba(255,255,255,0.1)',
+                            backdropFilter: 'blur(10px)',
+                            border: '1px solid rgba(255,255,255,0.2)',
+                            color: 'white',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            cursor: 'pointer',
+                            transition: 'all 0.3s'
+                        }}
+                        className="hover-lift"
+                    >
+                        <ArrowRight size={24} />
+                    </button>
+                </div>
+
+                {/* Progress Indicators */}
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    {SLIDES.map((_, index) => (
+                        <div
+                            key={index}
+                            onClick={() => setCurrentSlide(index)}
+                            style={{
+                                width: index === currentSlide ? '40px' : '10px',
+                                height: '4px',
+                                borderRadius: '2px',
+                                background: index === currentSlide ? 'var(--primary)' : 'rgba(255,255,255,0.2)',
+                                cursor: 'pointer',
+                                transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
+                            }}
+                        />
+                    ))}
+                </div>
             </div>
+
+            <style>{`
+                @keyframes spin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
+                .hover-lift:hover {
+                    transform: translateY(-8px);
+                }
+            `}</style>
         </div>
     );
 };

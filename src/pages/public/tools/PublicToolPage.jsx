@@ -15,7 +15,7 @@ const PublicToolPage = () => {
             <Navbar />
 
             <main style={{ flex: 1, padding: '4rem 1rem' }}>
-                <div className="container" style={{ maxWidth: '1200px' }}>
+                <div className="container" style={{ maxWidth: '1600px' }}>
                     <div style={{ marginBottom: '3rem' }}>
                         <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--text-secondary)', textDecoration: 'none', marginBottom: '1rem' }} className="hover-lift">
                             <ArrowLeft size={16} /> Retour à l'accueil

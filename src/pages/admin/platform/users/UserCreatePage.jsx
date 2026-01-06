@@ -33,7 +33,7 @@ const UserCreatePage = () => {
             await saveUser(formData);
             // Show success notification (mock)
             alert(isEditMode ? 'Utilisateur modifié avec succès' : 'Utilisateur créé avec succès');
-            navigate('/dashboard/admin/users');
+            navigate('/admin/dashboard/users');
         } catch (error) {
             console.error(error);
             alert('Une erreur est survenue');
@@ -47,7 +47,7 @@ const UserCreatePage = () => {
             {/* Header */}
             <div style={{ marginBottom: '2rem', display: 'flex', alignItems: 'center', gap: '1rem' }}>
                 <button
-                    onClick={() => navigate('/dashboard/admin/users')}
+                    onClick={() => navigate('/admin/dashboard/users')}
                     style={{
                         padding: '0.5rem',
                         borderRadius: '50%',
@@ -87,6 +87,45 @@ const UserCreatePage = () => {
                             <User size={18} color="var(--primary)" />
                             Informations Personnelles
                         </h3>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '2rem', marginBottom: '2rem' }}>
+                            <div style={{
+                                width: '80px',
+                                height: '80px',
+                                borderRadius: '50%',
+                                backgroundColor: 'var(--primary-light)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyCenter: 'center',
+                                border: '2px dashed var(--primary)',
+                                cursor: 'pointer',
+                                overflow: 'hidden'
+                            }}>
+                                {formData.avatar ? (
+                                    <img src={formData.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                    <User size={40} color="var(--primary)" style={{ margin: 'auto' }} />
+                                )}
+                            </div>
+                            <div style={{ flex: 1 }}>
+                                <label style={{ fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', display: 'block' }}>Photo de profil (Optionnel)</label>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                        const file = e.target.files[0];
+                                        if (file) {
+                                            const reader = new FileReader();
+                                            reader.onloadend = () => setFormData({ ...formData, avatar: reader.result });
+                                            reader.readAsDataURL(file);
+                                        }
+                                    }}
+                                    style={{ fontSize: '0.8rem' }}
+                                />
+                                <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>PNG, JPG jusqu'à 2Mo</p>
+                            </div>
+                        </div>
+
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
                             <Input
                                 label="Nom complet"
@@ -151,7 +190,6 @@ const UserCreatePage = () => {
                                     }}
                                 >
                                     {Object.values(userRoles)
-                                        .filter(role => role !== userRoles.VENDOR)
                                         .map(role => (
                                             <option key={role} value={role}>{roleLabels[role]}</option>
                                         ))}
@@ -180,13 +218,49 @@ const UserCreatePage = () => {
                                 </select>
                             </div>
                         </div>
+
+                        {formData.role === userRoles.VENDOR && (
+                            <div className="fade-in" style={{ marginTop: '1.5rem', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', padding: '1.5rem', backgroundColor: 'rgba(5, 150, 105, 0.05)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(5, 150, 105, 0.1)' }}>
+                                <Input
+                                    label="Nom de l'entreprise"
+                                    placeholder="Ex: Kouassi Trading SARL"
+                                    value={formData.company || ''}
+                                    onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                                    required
+                                />
+                                <div className="flex flex-col gap-1">
+                                    <label style={{ fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--text-main)' }}>
+                                        Type d'activité
+                                    </label>
+                                    <select
+                                        value={formData.typeActivite || ''}
+                                        onChange={(e) => setFormData({ ...formData, typeActivite: e.target.value })}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.75rem',
+                                            borderRadius: 'var(--radius-md)',
+                                            border: '1px solid var(--border-color)',
+                                            backgroundColor: 'white',
+                                            fontSize: '0.9375rem'
+                                        }}
+                                        required
+                                    >
+                                        <option value="">Sélectionner...</option>
+                                        <option value="Commerce">Commerce</option>
+                                        <option value="Services">Services</option>
+                                        <option value="Artisanat">Artisanat</option>
+                                        <option value="Autre">Autre</option>
+                                    </select>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Actions */}
                     <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem', borderTop: '1px solid var(--border-color)', paddingTop: '1.5rem' }}>
                         <button
                             type="button"
-                            onClick={() => navigate('/dashboard/admin/users')}
+                            onClick={() => navigate('/admin/dashboard/users')}
                             className="btn btn-ghost"
                             disabled={loading}
                         >

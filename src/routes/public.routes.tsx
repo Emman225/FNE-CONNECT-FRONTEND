@@ -5,6 +5,7 @@ import { Route, Navigate } from 'react-router-dom';
 import LandingPage from '../pages/public/landing/LandingPage';
 import AboutPage from '../pages/public/static/AboutPage';
 import NewsPage from '../pages/public/static/NewsPage';
+import NewsDetailPage from '../pages/public/static/NewsDetailPage';
 import FaqPage from '../pages/public/static/FaqPage';
 import ServicesPage from '../pages/public/static/ServicesPage';
 import ContactPage from '../pages/public/static/ContactPage';
@@ -45,6 +46,7 @@ export const PublicRoutes = (
         <Route path="/about" element={<AboutPage />} />
         <Route path="/services" element={<ServicesPage />} />
         <Route path="/news" element={<NewsPage />} />
+        <Route path="/news/:id" element={<NewsDetailPage />} />
         <Route path="/faq" element={<FaqPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/tools/:type" element={<PublicToolPage />} />

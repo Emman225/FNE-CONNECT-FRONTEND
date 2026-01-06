@@ -13,7 +13,6 @@ import StepsSection from './StepsSection';
 import HomeFAQ from './HomeFAQ';
 
 const LandingPage = () => {
-    console.log('🚀 LandingPage rendering...');
     return (
         <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
             <Navbar />
@@ -26,9 +25,6 @@ const LandingPage = () => {
                 <FeaturesSection />
                 <StepsSection />
                 <HomeFAQ />
-                {/* 
-                <HeroSection /> 
-                 */}
             </main>
             <Footer />
         </div>

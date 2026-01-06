@@ -145,11 +145,11 @@ const AdminDashboardHome = () => {
                 </Card>
 
                 {/* Administration Quick Actions */}
-                <Card style={{ padding: '1.5rem' }}>
+                <Card style={{ padding: '1.5rem', gridColumn: 'span 2' }}>
                     <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--text-main)', marginBottom: '1.5rem' }}>
                         Gestion Rapide
                     </h3>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
                         <Link to="/admin/dashboard/vendors">
                             <button className="btn btn-light" style={{ width: '100%', justifyContent: 'flex-start', padding: '1rem' }}>
                                 <UserPlus size={20} style={{ marginRight: '1rem', color: 'var(--primary)' }} />

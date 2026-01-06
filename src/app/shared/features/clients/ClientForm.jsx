@@ -8,7 +8,8 @@ import { useNavigate } from 'react-router-dom';
 const ClientForm = () => {
     const navigate = useNavigate();
     const [formData, setFormData] = useState({
-        name: '',
+        lastName: '',
+        firstName: '',
         phone: '',
         email: '',
         location: '',
@@ -20,7 +21,12 @@ const ClientForm = () => {
     const handleSubmit = (e) => {
         e.preventDefault();
         // Logic to save
-        console.log('Submitting client:', formData);
+        const clientData = {
+            ...formData,
+            id: 'CL-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
+            created_at: new Date().toISOString()
+        };
+        console.log('Submitting client:', clientData);
         alert('Client ajouté avec succès !');
         navigate('/dashboard/clients');
     };
@@ -58,21 +64,43 @@ const ClientForm = () => {
                     </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
-                    <Input
-                        label={formData.type === 'Entreprise' ? "Raison Sociale" : "Nom complet"}
-                        placeholder={formData.type === 'Entreprise' ? "Ex: DIO SARL" : "Ex: Jean Kouassi"}
-                        value={formData.name}
-                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                        required
-                    />
+                <div style={{ display: 'grid', gridTemplateColumns: formData.type === 'Particulier' ? '1fr 1fr' : '1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                    {formData.type === 'Particulier' ? (
+                        <>
+                            <Input
+                                label="Nom"
+                                placeholder="Ex: Kouassi"
+                                value={formData.lastName}
+                                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                                required
+                            />
+                            <Input
+                                label="Prénom(s)"
+                                placeholder="Ex: Jean Paul"
+                                value={formData.firstName}
+                                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                                required
+                            />
+                        </>
+                    ) : (
+                        <Input
+                            label="Raison Sociale"
+                            placeholder="Ex: DIO SARL"
+                            value={formData.lastName}
+                            onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                            required
+                        />
+                    )}
+                </div>
 
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
                     {formData.type === 'Entreprise' ? (
                         <Input
                             label="Numéro CC (NCC)"
                             placeholder="Ex: 1234567 A"
                             value={formData.taxId}
                             onChange={(e) => setFormData({ ...formData, taxId: e.target.value })}
+                            required
                         />
                     ) : (
                         <div className="flex flex-col gap-1 w-full" style={{ marginBottom: '1rem' }}>
@@ -83,7 +111,7 @@ const ClientForm = () => {
                                 color: 'var(--text-main)',
                                 display: 'block'
                             }}>
-                                Régime
+                                Régime fiscal
                             </label>
                             <select
                                 className="input-field"
@@ -94,6 +122,7 @@ const ClientForm = () => {
                                     height: '46px', // Match input height
                                     backgroundColor: 'white'
                                 }}
+                                required
                             >
                                 <option value="">Sélectionner un régime</option>
                                 <option value="Le régime de l’entreprenant">Le régime de l’entreprenant</option>
@@ -104,9 +133,7 @@ const ClientForm = () => {
                             </select>
                         </div>
                     )}
-                </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
                     <Input
                         label="Téléphone"
                         placeholder="+225..."
@@ -114,6 +141,9 @@ const ClientForm = () => {
                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                         required
                     />
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
                     <Input
                         label="Email (Optionnel)"
                         type="email"
@@ -121,21 +151,19 @@ const ClientForm = () => {
                         value={formData.email}
                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                     />
+                    <Input
+                        label="Localisation / Adresse"
+                        placeholder="Commune, Quartier, Rue..."
+                        value={formData.location}
+                        onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                        required
+                    />
                 </div>
 
-                <Input
-                    label="Localisation / Adresse"
-                    placeholder="Commune, Quartier, Rue..."
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    required
-                    style={{ marginBottom: '2.5rem' }}
-                />
-
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '1rem' }}>
                     <button type="button" className="btn btn-light" onClick={() => navigate('/dashboard/clients')} style={{ border: '1px solid var(--border-color)' }}>Annuler</button>
                     <button type="submit" className="btn btn-primary">
-                        <UserPlus size={18} /> Ajouter le client
+                        <UserPlus size={18} /> Enregistrer le client
                     </button>
                 </div>
             </form>

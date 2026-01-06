@@ -61,7 +61,7 @@ const UserListPage = () => {
                     </p>
                 </div>
                 <button
-                    onClick={() => navigate('/dashboard/admin/users/new')}
+                    onClick={() => navigate('/admin/dashboard/users/new')}
                     className="btn btn-primary"
                     style={{ padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                 >
@@ -208,7 +208,7 @@ const UserListPage = () => {
                                         <td style={{ padding: '1rem', textAlign: 'right' }}>
                                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
                                                 <button
-                                                    onClick={() => navigate(`/dashboard/admin/users/${user.id}`)} // Should go to edit page, id is enough
+                                                    onClick={() => navigate(`/admin/dashboard/users/${user.id}`)} // Should go to edit page, id is enough
                                                     style={{
                                                         padding: '0.5rem',
                                                         borderRadius: 'var(--radius-md)',
