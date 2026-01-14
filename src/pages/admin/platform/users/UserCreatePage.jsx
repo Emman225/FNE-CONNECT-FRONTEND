@@ -11,6 +11,8 @@ const saveUser = (userData) => {
     return new Promise(resolve => setTimeout(resolve, 1000));
 };
 
+import showAlert from '../../../../utils/sweetAlert';
+
 const UserCreatePage = () => {
     const navigate = useNavigate();
     const { id } = useParams(); // If id exists, it's edit mode
@@ -31,12 +33,16 @@ const UserCreatePage = () => {
         setLoading(true);
         try {
             await saveUser(formData);
-            // Show success notification (mock)
-            alert(isEditMode ? 'Utilisateur modifié avec succès' : 'Utilisateur créé avec succès');
+
+            await showAlert.success(
+                isEditMode ? 'Utilisateur modifié' : 'Utilisateur créé',
+                isEditMode ? 'Les informations de l\'utilisateur ont été mises à jour.' : 'Le nouvel utilisateur a été créé avec succès.'
+            );
+
             navigate('/admin/dashboard/users');
         } catch (error) {
             console.error(error);
-            alert('Une erreur est survenue');
+            showAlert.error('Erreur', 'Une erreur est survenue lors de l\'enregistrement.');
         } finally {
             setLoading(false);
         }

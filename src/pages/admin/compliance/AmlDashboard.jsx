@@ -6,6 +6,7 @@ import { MOCK_AML_ALERTS } from '../../../data/mockData';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useNotifications } from '../../../context/NotificationContext';
+import DataTable from '../../../components/ui/DataTable/DataTable';
 // TODO: Créer ces composants
 // import AccountBlockModal from '../../../components/compliance/AccountBlockModal';
 // import CentifReportGenerator from '../../../components/compliance/CentifReportGenerator';
@@ -182,171 +183,105 @@ const AmlDashboard = () => {
             </div>
 
             {/* Alerts Table */}
-            <Card style={{ padding: '1.5rem' }}>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '1.5rem', color: 'var(--text-main)' }}>
-                    Alertes AML Récentes
-                </h3>
-
-                <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                            <tr style={{ borderBottom: '2px solid var(--border-color)' }}>
-                                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    Référence
-                                </th>
-                                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    Vendeur
-                                </th>
-                                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    Type d'Alerte
-                                </th>
-                                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    Description
-                                </th>
-                                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    Date
-                                </th>
-                                <th style={{ padding: '1rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    Sévérité
-                                </th>
-                                <th style={{ padding: '1rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    Statut
-                                </th>
-                                <th style={{ padding: '1rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    Actions
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {alerts.map((alert) => {
-                                const severityStyle = getSeverityColor(alert.severity);
+            <Card style={{ padding: '0px', overflow: 'hidden' }}>
+                <DataTable
+                    title="Alertes AML Récentes"
+                    columns={[
+                        {
+                            key: 'id',
+                            label: 'Référence',
+                            sortable: true,
+                            render: (row) => <span style={{ fontWeight: '600', color: 'var(--primary)' }}>{row.id}</span>
+                        },
+                        {
+                            key: 'vendorName',
+                            label: 'Vendeur',
+                            sortable: true,
+                            render: (row) => (
+                                <div>
+                                    <div style={{ fontWeight: '500' }}>{row.vendorName}</div>
+                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>ID: {row.vendorId}</div>
+                                </div>
+                            )
+                        },
+                        {
+                            key: 'type',
+                            label: 'Type d\'Alerte',
+                            sortable: true,
+                            render: (row) => <span style={{ textTransform: 'capitalize' }}>{row.type.replace('_', ' ')}</span>
+                        },
+                        {
+                            key: 'description',
+                            label: 'Description',
+                            render: (row) => <div style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', maxWidth: '250px' }}>{row.description}</div>
+                        },
+                        {
+                            key: 'createdAt',
+                            label: 'Date',
+                            sortable: true,
+                            render: (row) => format(new Date(row.createdAt), 'dd MMM yyyy', { locale: fr })
+                        },
+                        {
+                            key: 'severity',
+                            label: 'Sévérité',
+                            sortable: true,
+                            align: 'center',
+                            render: (row) => {
+                                const style = getSeverityColor(row.severity);
                                 return (
-                                    <tr key={alert.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                                        <td style={{ padding: '1rem' }}>
-                                            <span style={{ fontWeight: '600', color: 'var(--primary)' }}>
-                                                {alert.id}
-                                            </span>
-                                        </td>
-                                        <td style={{ padding: '1rem' }}>
-                                            <div>
-                                                <div style={{ fontWeight: '500' }}>{alert.vendorName}</div>
-                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                                    ID: {alert.vendorId}
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td style={{ padding: '1rem' }}>
-                                            <span style={{
-                                                fontSize: '0.875rem',
-                                                textTransform: 'capitalize'
-                                            }}>
-                                                {alert.type.replace('_', ' ')}
-                                            </span>
-                                        </td>
-                                        <td style={{ padding: '1rem', fontSize: '0.875rem', color: 'var(--text-secondary)', maxWidth: '300px' }}>
-                                            {alert.description}
-                                        </td>
-                                        <td style={{ padding: '1rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                                            {format(new Date(alert.createdAt), 'dd MMM yyyy', { locale: fr })}
-                                        </td>
-                                        <td style={{ padding: '1rem', textAlign: 'center' }}>
-                                            <span style={{
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                padding: '0.25rem 0.75rem',
-                                                borderRadius: '9999px',
-                                                fontSize: '0.75rem',
-                                                fontWeight: '600',
-                                                backgroundColor: severityStyle.bg,
-                                                color: severityStyle.color,
-                                                border: `1px solid ${severityStyle.border}`,
-                                                textTransform: 'uppercase'
-                                            }}>
-                                                {alert.severity}
-                                            </span>
-                                        </td>
-                                        <td style={{ padding: '1rem', textAlign: 'center' }}>
-                                            {alert.status === 'pending' ? (
-                                                <span style={{
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    padding: '0.25rem 0.75rem',
-                                                    borderRadius: '9999px',
-                                                    fontSize: '0.75rem',
-                                                    fontWeight: '600',
-                                                    backgroundColor: '#FEF3C7',
-                                                    color: '#D97706',
-                                                    textTransform: 'uppercase'
-                                                }}>
-                                                    En attente
-                                                </span>
-                                            ) : (
-                                                <span style={{
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    padding: '0.25rem 0.75rem',
-                                                    borderRadius: '9999px',
-                                                    fontSize: '0.75rem',
-                                                    fontWeight: '600',
-                                                    backgroundColor: 'var(--success-light)',
-                                                    color: 'var(--success)',
-                                                    textTransform: 'uppercase'
-                                                }}>
-                                                    Traité
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td style={{ padding: '1rem', textAlign: 'right' }}>
-                                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                                {alert.status === 'pending' && (
-                                                    <>
-                                                        <button
-                                                            onClick={() => handleReviewAlert(alert)}
-                                                            style={{
-                                                                padding: '0.5rem',
-                                                                border: '1px solid var(--border-color)',
-                                                                borderRadius: 'var(--radius-md)',
-                                                                background: 'white',
-                                                                cursor: 'pointer',
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                gap: '0.25rem'
-                                                            }}
-                                                            title="Examiner"
-                                                        >
-                                                            <Eye size={16} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleBlockAccount(alert)}
-                                                            style={{
-                                                                padding: '0.5rem',
-                                                                border: '1px solid #EF4444',
-                                                                borderRadius: 'var(--radius-md)',
-                                                                background: 'white',
-                                                                cursor: 'pointer',
-                                                                color: '#DC2626'
-                                                            }}
-                                                            title="Bloquer compte"
-                                                        >
-                                                            <Lock size={16} />
-                                                        </button>
-                                                    </>
-                                                )}
-                                                {alert.status === 'reviewed' && alert.reviewedBy && (
-                                                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                                        Par {alert.reviewedBy}
-                                                        <br />
-                                                        {format(new Date(alert.reviewedAt), 'dd/MM/yyyy', { locale: fr })}
-                                                    </div>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
+                                    <span style={{
+                                        display: 'inline-flex',
+                                        padding: '0.25rem 0.75rem',
+                                        borderRadius: '9999px',
+                                        fontSize: '0.75rem',
+                                        fontWeight: '600',
+                                        backgroundColor: style.bg,
+                                        color: style.color,
+                                        border: `1px solid ${style.border}`,
+                                        textTransform: 'uppercase'
+                                    }}>
+                                        {row.severity}
+                                    </span>
                                 );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
+                            }
+                        },
+                        {
+                            key: 'status',
+                            label: 'Statut',
+                            sortable: true,
+                            align: 'center',
+                            render: (row) => (
+                                <span style={{
+                                    display: 'inline-flex',
+                                    padding: '0.25rem 0.75rem',
+                                    borderRadius: '9999px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: '600',
+                                    backgroundColor: row.status === 'pending' ? '#FEF3C7' : 'var(--success-light)',
+                                    color: row.status === 'pending' ? '#D97706' : 'var(--success)',
+                                    textTransform: 'uppercase'
+                                }}>
+                                    {row.status === 'pending' ? 'En attente' : 'Traité'}
+                                </span>
+                            )
+                        }
+                    ]}
+                    data={alerts}
+                    renderRowActions={(row) => (
+                        <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                            {row.status === 'pending' ? (
+                                <>
+                                    <button onClick={() => handleReviewAlert(row)} className="btn-icon" title="Examiner"><Eye size={16} /></button>
+                                    <button onClick={() => handleBlockAccount(row)} className="btn-icon" style={{ color: 'var(--danger)' }} title="Bloquer"><Lock size={16} /></button>
+                                </>
+                            ) : (
+                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', textAlign: 'right' }}>
+                                    Par {row.reviewedBy}<br />{format(new Date(row.reviewedAt), 'dd/MM/yyyy')}
+                                </div>
+                            )}
+                        </div>
+                    )}
+                />
             </Card>
 
             {/* TODO: Créer le composant AccountBlockModal

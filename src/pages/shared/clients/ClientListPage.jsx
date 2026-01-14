@@ -2,8 +2,11 @@ import React, { useState } from 'react';
 import Button from '../../../components/ui/Button';
 import ClientTable from '../../../app/shared/features/clients/ClientTable';
 import { Plus, Search } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useDashboardPath } from '../../../hooks/useDashboardPath';
+import { useNotifications } from '../../../context/NotificationContext';
+
+import showAlert from '../../../utils/sweetAlert';
 
 const MOCK_CLIENTS = [
     { id: 1, name: 'Jean Doe', phone: '0708091011', email: 'jean@gmail.com', location: 'Cocody, Riviéra', type: 'Particulier', invoicesCount: 3 },
@@ -13,12 +16,36 @@ const MOCK_CLIENTS = [
 
 const ClientListPage = () => {
     const { basePath } = useDashboardPath();
+    const navigate = useNavigate();
+    const { showSuccess } = useNotifications();
+    const [clients, setClients] = useState(MOCK_CLIENTS);
     const [searchTerm, setSearchTerm] = useState('');
 
-    const filteredClients = MOCK_CLIENTS.filter(client =>
+    const filteredClients = clients.filter(client =>
         client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         client.phone.includes(searchTerm)
     );
+
+    const handleView = (client) => {
+        navigate(`${basePath}/clients/${client.id}`);
+    };
+
+    const handleEdit = (client) => {
+        navigate(`${basePath}/clients/edit/${client.id}`);
+    };
+
+    const handleDelete = async (client) => {
+        const result = await showAlert.confirm(
+            'Suppression',
+            'Êtes-vous sûr de vouloir supprimer ce client ?',
+            'Supprimer'
+        );
+
+        if (result.isConfirmed) {
+            setClients(clients.filter(c => c.id !== client.id));
+            showSuccess('Client supprimé avec succès');
+        }
+    };
 
     return (
         <div>
@@ -51,7 +78,12 @@ const ClientListPage = () => {
                 />
             </div>
 
-            <ClientTable clients={filteredClients} />
+            <ClientTable
+                clients={filteredClients}
+                onView={handleView}
+                onEdit={handleEdit}
+                onDelete={handleDelete}
+            />
         </div>
     );
 };

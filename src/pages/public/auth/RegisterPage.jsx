@@ -17,29 +17,30 @@ const RegisterPage = () => {
         phone: '',
         password: '',
         confirmPassword: '',
-        // Step 2
-        civilite: '',
-        nationalite: '',
-        nom: '',
-        prenoms: '',
-        dateNaissance: '',
-        lieuNaissance: '',
-        adresse: '',
-        email: '',
-        // Step 3
-        typeActivite: '',
-        descriptionActivite: '',
-        nomCommercial: '',
-        anneeDebut: '',
+        otpCode: '', // New field for OTP
+        // Step 2 (Updated to Client Type/Activity)
+        clientType: '', // B2B, B2C, B2F, B2G
+        // B2B/B2G fields
+        clientNcc: '',
+        clientName: '',
+        clientPhone: '',
+        clientEmail: '',
+        // B2F specific
+        currency: '',
+        exchangeRate: '',
+        // Step 3 (Activity)
+        activityNature: '', // Artisan, Commerçant... instead of TypeActivite
+        activityDescription: '',
+        activityStartYear: '',
         // Step 4
         cniRecto: null,
         cniVerso: null,
         cniSelfie: null,
         justificatifDomicile: null,
-        // Step 5
-        typeComptePaiement: '',
-        telPaiement: '',
-        // Step 6
+        // Step 5 (Payment - moved from step 5 to 6 in logic but data remains)
+        selectedPlan: '', // instead of typeComptePaiement
+        paymentMethod: '', // instead of telPaiement
+        // Step 6 (Contract - moved to step 5 in new flow but let's keep structure flexible)
         agreements: {
             cgu: false,
             confidentialite: false,
@@ -79,9 +80,9 @@ const RegisterPage = () => {
             case 4:
                 return <Step4Documents data={formData} updateData={updateFormData} onNext={nextStep} onBack={prevStep} />;
             case 5:
-                return <Step5Paiement data={formData} updateData={updateFormData} onNext={nextStep} onBack={prevStep} />;
+                return <Step6Contrat data={formData} updateData={updateFormData} onNext={nextStep} onBack={prevStep} />;
             case 6:
-                return <Step6Contrat data={formData} updateData={updateFormData} onSubmit={handleSubmit} onBack={prevStep} />;
+                return <Step5Paiement data={formData} updateData={updateFormData} onSubmit={handleSubmit} onBack={prevStep} />;
             case 7:
                 return <Step7Validation />;
             default:

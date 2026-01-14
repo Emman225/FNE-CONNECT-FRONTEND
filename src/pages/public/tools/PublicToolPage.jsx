@@ -1,14 +1,16 @@
 import React from 'react';
-import { useParams, Link } from 'react-router-dom';
-import DocumentForm from '../../../app/shared/features/documents/DocumentForm';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import InvoiceForm from '../../../components/forms/InvoiceForm/InvoiceForm';
+import { DocumentType } from '../../../types/invoice.types';
 import { ArrowLeft } from 'lucide-react';
 import Navbar from '../../../app/public/components/Navbar';
 import Footer from '../../../app/public/components/Footer';
 
 const PublicToolPage = () => {
     const { type } = useParams();
+    const navigate = useNavigate();
     const isProforma = type === 'proforma';
-    const title = isProforma ? 'Créer une Proforma' : 'Créer une Facture';
+
 
     return (
         <div style={{ backgroundColor: 'var(--bg-main)', minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
@@ -16,35 +18,27 @@ const PublicToolPage = () => {
 
             <main style={{ flex: 1, padding: '4rem 1rem' }}>
                 <div className="container" style={{ maxWidth: '1600px' }}>
-                    <div style={{ marginBottom: '3rem' }}>
-                        <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--text-secondary)', textDecoration: 'none', marginBottom: '1rem' }} className="hover-lift">
+                    <div style={{ marginBottom: '1rem' }}>
+                        <Link to="/" style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--text-secondary)', textDecoration: 'none' }} className="hover-lift">
                             <ArrowLeft size={16} /> Retour à l'accueil
                         </Link>
-                        <h1 style={{
-                            fontSize: '2.5rem',
-                            fontWeight: '900',
-                            color: 'var(--primary)',
-                            letterSpacing: '-0.03em',
-                            marginBottom: '0.5rem'
-                        }}>
-                            {title}
-                        </h1>
-                        <p style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>
-                            Testez notre outil de génération. L'export officiel nécessite un abonnement.
-                        </p>
                     </div>
 
-                    <div style={{
-                        backgroundColor: 'white',
-                        borderRadius: 'var(--radius-2xl)',
-                        padding: '2rem',
-                        boxShadow: 'var(--shadow-xl)',
-                        border: '1px solid var(--border-color)',
-                        position: 'relative',
-                        overflow: 'hidden'
-                    }}>
-                        <DocumentForm type={isProforma ? 'proforma' : 'invoice'} isPublic={true} />
-                    </div>
+                    <InvoiceForm
+                        initialData={{
+                            documentType: isProforma ? DocumentType.PROFORMA : DocumentType.INVOICE
+                        }}
+                        watermarkText="BROUILLON"
+                        submitLabel="Générer (Abonnement requis)"
+                        headerTitle={isProforma ? 'Proforma' : 'Facture'}
+                        key={type}
+                        onSubmit={async (data) => {
+                            // Simulation d'un petit délai pour l'effet UX
+                            await new Promise(resolve => setTimeout(resolve, 800));
+                            // Redirection vers l'inscription car abonnement requis
+                            navigate('/auth/register');
+                        }}
+                    />
                 </div>
             </main>
 

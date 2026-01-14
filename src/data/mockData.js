@@ -41,9 +41,9 @@ export const MOCK_VENDORS = [];
 export const MOCK_INVOICES = [];
 export const MOCK_CLIENTS = [];
 export const MOCK_PROFORMAS = [
-    { id: 'PROF-2023-001', client: { name: 'Sarl Ivoir', phone: '0102030405' }, createdAt: '2023-12-01', validUntil: '2023-12-31', totalTTC: 450000, status: 'draft', isComplete: true },
-    { id: 'PROF-2023-002', client: { name: 'Hôtel Splendid', phone: '0707080910' }, createdAt: '2023-12-05', validUntil: '2024-01-05', totalTTC: 1250000, status: 'pending', isComplete: true },
-    { id: 'PROF-2023-003', client: { name: 'Garage Konan', phone: '0505050505' }, createdAt: '2023-12-10', validUntil: '2024-01-10', totalTTC: 75000, status: 'draft', isComplete: false },
+    { id: 'PROF-2023-001', accountNumber: 'FNE-25897111', client: { name: 'Sarl Ivoir', phone: '0102030405' }, createdAt: '2023-12-01', validUntil: '2023-12-31', totalTTC: 450000, status: 'draft', isComplete: true },
+    { id: 'PROF-2023-002', accountNumber: 'FNE-25897112', client: { name: 'Hôtel Splendid', phone: '0707080910' }, createdAt: '2023-12-05', validUntil: '2024-01-05', totalTTC: 1250000, status: 'pending', isComplete: true },
+    { id: 'PROF-2023-003', accountNumber: 'FNE-25897113', client: { name: 'Garage Konan', phone: '0505050505' }, createdAt: '2023-12-10', validUntil: '2024-01-10', totalTTC: 75000, status: 'draft', isComplete: false },
 ];
 export const MOCK_QUOTES = [];
 export const MOCK_PAYMENTS = [];

@@ -1,9 +1,30 @@
 import React from 'react';
+import toast from 'react-hot-toast';
 
 const Step3Activite = ({ data, updateData, onNext, onBack }) => {
+
+    // Validation Logic
+    const validate = () => {
+        if (!data.activityNature) {
+            toast.error('Veuillez sélectionner la nature de votre activité.');
+            return false;
+        }
+        if (!data.activityDescription || data.activityDescription.trim().length < 10) {
+            toast.error('Veuillez fournir une description d\'au moins 10 caractères.');
+            return false;
+        }
+        if (!data.activityStartYear) {
+            toast.error('Veuillez sélectionner l\'année de début d\'activité.');
+            return false;
+        }
+        return true;
+    };
+
     const handleSubmit = (e) => {
         e.preventDefault();
-        onNext();
+        if (validate()) {
+            onNext();
+        }
     };
 
     return (
@@ -23,17 +44,18 @@ const Step3Activite = ({ data, updateData, onNext, onBack }) => {
             </div>
 
             <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-                {/* Type d'activité */}
+
+                {/* Nature de l'activité */}
                 <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
-                        Type d'activité
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--text-main)' }}>
+                        Nature de l'activité <span style={{ color: 'red' }}>*</span>
                     </label>
                     <select
                         className="input-field"
-                        value={data.typeActivite || ''}
-                        onChange={(e) => updateData({ typeActivite: e.target.value })}
+                        value={data.activityNature || ''}
+                        onChange={(e) => updateData({ activityNature: e.target.value })}
                     >
-                        <option value="">Sélectionnez votre activité</option>
+                        <option value="">Sélectionnez une option</option>
                         <option value="Artisan">Artisan</option>
                         <option value="Commerçant">Commerçant</option>
                         <option value="Prestataire de services">Prestataire de services</option>
@@ -44,42 +66,31 @@ const Step3Activite = ({ data, updateData, onNext, onBack }) => {
 
                 {/* Description de l'activité */}
                 <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
-                        Description de l'activité
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--text-main)' }}>
+                        Description de l'activité <span style={{ color: 'red' }}>*</span>
                     </label>
                     <textarea
                         className="input-field"
-                        placeholder="Décrivez brièvement votre activité..."
-                        value={data.descriptionActivite || ''}
-                        onChange={(e) => updateData({ descriptionActivite: e.target.value })}
+                        placeholder="Décrivez brièvement votre activité, vos produits ou services..."
+                        value={data.activityDescription || ''}
+                        onChange={(e) => updateData({ activityDescription: e.target.value })}
                         rows={4}
                         style={{ resize: 'vertical' }}
                     />
-                </div>
-
-                {/* Nom commercial (optionnel) */}
-                <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
-                        Nom commercial (optionnel)
-                    </label>
-                    <input
-                        type="text"
-                        className="input-field"
-                        placeholder="Ex: Boutique Chez Mamadou"
-                        value={data.nomCommercial || ''}
-                        onChange={(e) => updateData({ nomCommercial: e.target.value })}
-                    />
+                    <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.25rem', textAlign: 'right' }}>
+                        {(data.activityDescription || '').length}/10 caractères min.
+                    </p>
                 </div>
 
                 {/* Année de début d'activité */}
                 <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem' }}>
-                        Année de début d'activité
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', fontSize: '0.875rem', color: 'var(--text-main)' }}>
+                        Année de début d'activité <span style={{ color: 'red' }}>*</span>
                     </label>
                     <select
                         className="input-field"
-                        value={data.anneeDebut || ''}
-                        onChange={(e) => updateData({ anneeDebut: e.target.value })}
+                        value={data.activityStartYear || ''}
+                        onChange={(e) => updateData({ activityStartYear: e.target.value })}
                     >
                         <option value="">Sélectionnez l'année</option>
                         {Array.from({ length: 30 }, (_, i) => new Date().getFullYear() - i).map(year => (

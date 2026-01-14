@@ -95,14 +95,6 @@ class _ClientListScreenState extends State<ClientListScreen> {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          // TODO: Navigate to add client
-        },
-        backgroundColor: AppColors.primary,
-        icon: const Icon(Icons.person_add),
-        label: const Text('Nouveau Client'),
-      ),
     );
   }
 

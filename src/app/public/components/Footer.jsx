@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import logo from '../../../assets/logo.png';
 import { ShieldCheck, Mail, Phone, MapPin, ArrowUp } from 'lucide-react';
 
 const Footer = () => {
@@ -31,12 +32,9 @@ const Footer = () => {
                         {/* Brand */}
                         <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
-                                <div style={{ background: 'rgba(255,255,255,0.1)', padding: '0.5rem', borderRadius: '8px' }}>
-                                    <ShieldCheck size={24} color="#ffffff" />
-                                </div>
-                                <span style={{ fontSize: '1.5rem', fontWeight: '800', letterSpacing: '-0.5px' }}>
-                                    FNE <span style={{ color: '#ffffff' }}>CONNECT</span>
-                                </span>
+
+
+                                <img src={logo} alt="FNE Connect" style={{ width: '80px', height: '80px', objectFit: 'contain', marginRight: '0.5rem' }} />
                             </div>
                             <p style={{ opacity: 0.9, lineHeight: '1.6', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
                                 Partenaire stratégique de votre réussite fiscale. Solution agréée DGI.

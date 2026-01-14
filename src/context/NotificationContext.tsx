@@ -120,7 +120,6 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     return (
         <NotificationContext.Provider value={value}>
             {children}
-            <Toaster />
         </NotificationContext.Provider>
     );
 };

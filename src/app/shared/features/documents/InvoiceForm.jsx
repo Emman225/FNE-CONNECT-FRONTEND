@@ -5,6 +5,7 @@ import Button from '../../../../components/ui/Button';
 import { Plus, Trash2, Save, FileCheck } from 'lucide-react';
 import { calculateInvoiceTotals, formatCurrency } from '../../../../utils/financialUtils';
 import { useNavigate } from 'react-router-dom';
+import showAlert from '../../../../utils/sweetAlert';
 
 const InvoiceForm = () => {
     const navigate = useNavigate();
@@ -32,10 +33,10 @@ const InvoiceForm = () => {
         setItems(items.map(i => i.id === id ? { ...i, [field]: value } : i));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         // Logic to save
-        alert('Facture enregistrée avec succès !');
+        await showAlert.success('Succès', 'Facture enregistrée avec succès !');
         navigate('/dashboard/invoices');
     };
 

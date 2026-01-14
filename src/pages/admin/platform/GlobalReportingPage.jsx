@@ -4,6 +4,7 @@ import Button from '../../../components/ui/Button';
 import { TrendingUp, DollarSign, Users, FileText, Download, Calendar } from 'lucide-react';
 import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { formatCurrency } from '../../../utils/financialUtils';
+import DataTable from '../../../components/ui/DataTable/DataTable';
 
 const GlobalReportingPage = () => {
     const [period, setPeriod] = useState('month');
@@ -31,17 +32,81 @@ const GlobalReportingPage = () => {
     ];
 
     const topVendors = [
-        { name: 'Mamadou Diallo', revenue: 15750000, commissions: 472500, documents: 45 },
-        { name: 'Aissatou Ndiaye', revenue: 12300000, commissions: 369000, documents: 38 },
-        { name: 'Fatou Sow', revenue: 8500000, commissions: 255000, documents: 28 },
-        { name: 'Ousmane Ba', revenue: 7200000, commissions: 216000, documents: 24 },
-        { name: 'Aminata Sy', revenue: 6800000, commissions: 204000, documents: 22 }
+        { rank: 1, accountNumber: 'FNE-25897101', name: 'Mamadou Diallo', revenue: 15750000, commissions: 472500, documents: 45 },
+        { rank: 2, accountNumber: 'FNE-25897104', name: 'Aissatou Ndiaye', revenue: 12300000, commissions: 369000, documents: 38 },
+        { rank: 3, accountNumber: 'FNE-25897102', name: 'Fatou Sow', revenue: 8500000, commissions: 255000, documents: 28 },
+        { rank: 4, accountNumber: 'FNE-25897107', name: 'Ousmane Ba', revenue: 7200000, commissions: 216000, documents: 24 },
+        { rank: 5, accountNumber: 'FNE-25897109', name: 'Aminata Sy', revenue: 6800000, commissions: 204000, documents: 22 }
     ];
 
     const totalRevenue = revenueData.reduce((sum, item) => sum + item.revenue, 0);
     const totalCommissions = revenueData.reduce((sum, item) => sum + item.commissions, 0);
     const totalTax = revenueData.reduce((sum, item) => sum + item.tax, 0);
     const totalVendors = vendorDistribution.reduce((sum, item) => sum + item.value, 0);
+
+    const columns = [
+        {
+            key: 'rank',
+            label: 'Rang',
+            render: (row) => (
+                <div style={{
+                    width: '32px',
+                    height: '32px',
+                    borderRadius: '50%',
+                    backgroundColor: row.rank === 1 ? '#FFD700' : row.rank === 2 ? '#C0C0C0' : row.rank === 3 ? '#CD7F32' : 'var(--bg-main)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: '700',
+                    color: row.rank <= 3 ? 'white' : 'var(--text-secondary)'
+                }}>
+                    {row.rank}
+                </div>
+            )
+        },
+        {
+            key: 'accountNumber',
+            label: 'N° Compte',
+            render: (row) => <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: 'var(--primary)' }}>{row.accountNumber}</span>
+        },
+        {
+            key: 'name',
+            label: 'Vendeur',
+            sortable: true,
+            render: (row) => <span style={{ fontWeight: '600' }}>{row.name}</span>
+        },
+        {
+            key: 'revenue',
+            label: 'CA Généré',
+            sortable: true,
+            align: 'right',
+            render: (row) => <span style={{ fontWeight: '600', color: 'var(--primary)' }}>{formatCurrency(row.revenue)}</span>
+        },
+        {
+            key: 'commissions',
+            label: 'Commissions',
+            sortable: true,
+            align: 'right',
+            render: (row) => <span style={{ fontWeight: '600', color: 'var(--secondary)' }}>{formatCurrency(row.commissions)}</span>
+        },
+        {
+            key: 'documents',
+            label: 'Documents',
+            align: 'center',
+            sortable: true,
+            render: (row) => (
+                <span style={{
+                    padding: '0.25rem 0.75rem',
+                    borderRadius: '9999px',
+                    backgroundColor: 'var(--bg-main)',
+                    fontSize: '0.875rem',
+                    fontWeight: '600'
+                }}>
+                    {row.documents}
+                </span>
+            )
+        }
+    ];
 
     return (
         <div>
@@ -259,74 +324,18 @@ const GlobalReportingPage = () => {
             </Card>
 
             {/* Top Vendors */}
-            <Card style={{ padding: '1.5rem' }}>
-                <h3 style={{ fontSize: '1.125rem', fontWeight: '700', marginBottom: '1.5rem', color: 'var(--text-main)' }}>
-                    Top 5 Vendeurs
-                </h3>
-                <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                            <tr style={{ borderBottom: '2px solid var(--border-color)' }}>
-                                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    Rang
-                                </th>
-                                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    Vendeur
-                                </th>
-                                <th style={{ padding: '1rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    CA Généré
-                                </th>
-                                <th style={{ padding: '1rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    Commissions
-                                </th>
-                                <th style={{ padding: '1rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    Documents
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {topVendors.map((vendor, index) => (
-                                <tr key={index} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                                    <td style={{ padding: '1rem' }}>
-                                        <div style={{
-                                            width: '32px',
-                                            height: '32px',
-                                            borderRadius: '50%',
-                                            backgroundColor: index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : index === 2 ? '#CD7F32' : 'var(--bg-main)',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            fontWeight: '700',
-                                            color: index < 3 ? 'white' : 'var(--text-secondary)'
-                                        }}>
-                                            {index + 1}
-                                        </div>
-                                    </td>
-                                    <td style={{ padding: '1rem', fontWeight: '600' }}>
-                                        {vendor.name}
-                                    </td>
-                                    <td style={{ padding: '1rem', textAlign: 'right', fontWeight: '600', color: 'var(--primary)' }}>
-                                        {formatCurrency(vendor.revenue)}
-                                    </td>
-                                    <td style={{ padding: '1rem', textAlign: 'right', fontWeight: '600', color: 'var(--secondary)' }}>
-                                        {formatCurrency(vendor.commissions)}
-                                    </td>
-                                    <td style={{ padding: '1rem', textAlign: 'center' }}>
-                                        <span style={{
-                                            padding: '0.25rem 0.75rem',
-                                            borderRadius: '9999px',
-                                            backgroundColor: 'var(--bg-main)',
-                                            fontSize: '0.875rem',
-                                            fontWeight: '600'
-                                        }}>
-                                            {vendor.documents}
-                                        </span>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
+            <Card style={{ padding: '0', overflow: 'hidden' }}> {/* padding 0 for DataTable full width */}
+                <div style={{ padding: '1.5rem 1.5rem 0' }}>
+                    <h3 style={{ fontSize: '1.125rem', fontWeight: '700', marginBottom: '1rem', color: 'var(--text-main)' }}>
+                        Top 5 Vendeurs
+                    </h3>
                 </div>
+
+                <DataTable
+                    columns={columns}
+                    data={topVendors}
+                    searchPlaceholder="Rechercher un vendeur..."
+                />
             </Card>
         </div>
     );

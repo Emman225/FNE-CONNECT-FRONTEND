@@ -77,14 +77,6 @@ class _DocumentListScreenState extends State<DocumentListScreen> with SingleTick
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          _showCreateDocumentDialog();
-        },
-        backgroundColor: AppColors.primary,
-        icon: const Icon(Icons.add),
-        label: const Text('Créer'),
-      ),
     );
   }
 
@@ -251,52 +243,4 @@ class _DocumentListScreenState extends State<DocumentListScreen> with SingleTick
     );
   }
 
-  void _showCreateDocumentDialog() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text(
-              'Créer un nouveau document',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            const SizedBox(height: 24),
-            ListTile(
-              leading: const Icon(Icons.description, color: AppColors.primary),
-              title: const Text('Facture'),
-              onTap: () {
-                Navigator.pop(context);
-                // TODO: Navigate to create invoice
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.assignment, color: AppColors.secondary),
-              title: const Text('Devis'),
-              onTap: () {
-                Navigator.pop(context);
-                // TODO: Navigate to create quote
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.receipt_long, color: AppColors.accent),
-              title: const Text('Proforma'),
-              onTap: () {
-                Navigator.pop(context);
-                // TODO: Navigate to create proforma
-              },
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

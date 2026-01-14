@@ -1,6 +1,7 @@
 import React, { useState, FormEvent } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { ArrowRight, User, Lock, CheckSquare, Square, Eye, EyeOff, ShieldCheck } from 'lucide-react';
+import logo from '../assets/logo.png';
 import { useAuth } from './AuthProvider';
 import { userRoles, isAdminRole } from '../types/roles';
 
@@ -68,36 +69,15 @@ const AdminLogin = () => {
                 {/* Logo Section */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '1.5rem' }}>
                     <div style={{
-                        width: '56px', // Reduced size
-                        height: '56px',
-                        background: 'linear-gradient(135deg, #10b981 0%, #0a6fbd 100%)',
-                        borderRadius: '12px',
+                        width: '80px',
+                        height: '80px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        marginBottom: '0.75rem',
-                        boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.3)',
-                        transform: 'rotate(-5deg)'
+                        marginBottom: '0.75rem'
                     }}>
-                        <ShieldCheck size={32} color="white" />
+                        <img src={logo} alt="FNE Connect Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: 'multiply' }} />
                     </div>
-                    <h2 style={{
-                        fontSize: '1.25rem', // Reduced font size
-                        fontWeight: '800',
-                        color: '#1e293b',
-                        marginBottom: '0.25rem',
-                        textAlign: 'center'
-                    }}>
-                        FNE <span style={{ color: '#10b981' }}>Connect</span>
-                    </h2>
-                    <p style={{
-                        color: '#64748b',
-                        fontSize: '0.85rem', // Reduced font size
-                        textAlign: 'center',
-                        fontWeight: '500'
-                    }}>
-                        Espace Administration
-                    </p>
                 </div>
 
                 <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

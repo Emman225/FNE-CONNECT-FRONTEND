@@ -86,8 +86,8 @@ const AdminDashboardHome = () => {
                         </div>
                     </div>
 
-                    <div style={{ height: '350px', width: '100%' }}>
-                        <ResponsiveContainer width="100%" height="100%">
+                    <div style={{ height: '350px', width: '100%', minHeight: 0, minWidth: 0 }}>
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                             <LineChart data={platformActivityData}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.3} />
                                 <XAxis

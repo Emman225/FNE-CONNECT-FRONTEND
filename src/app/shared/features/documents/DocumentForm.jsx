@@ -5,6 +5,7 @@ import Button from '../../../../components/ui/Button';
 import { Plus, Trash2, Save, FileCheck, FileText } from 'lucide-react';
 import { calculateInvoiceTotals, formatCurrency } from '../../../../utils/financialUtils';
 import { useNavigate } from 'react-router-dom';
+import showAlert from '../../../../utils/sweetAlert';
 
 const DocumentForm = ({ type = 'invoice', isPublic = false }) => {
     const navigate = useNavigate();
@@ -86,11 +87,11 @@ const DocumentForm = ({ type = 'invoice', isPublic = false }) => {
         setItems(items.map(i => i.id === id ? { ...i, [field]: value } : i));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (isPublic) {
-            alert("Veuillez vous abonner pour générer et télécharger ce document officiel.");
+            showAlert.warning("Abonnement requis", "Veuillez vous abonner pour générer et télécharger ce document officiel.");
             return;
         }
 
@@ -105,8 +106,15 @@ const DocumentForm = ({ type = 'invoice', isPublic = false }) => {
         };
 
         console.log('FNE Data Payload:', fullDoc);
-        alert(`${isQuote ? 'Devis' : (type === 'proforma' ? 'Facture Proforma' : 'Facture')} générée. Transmission aux services FNE...`);
+        await showAlert.success(
+            isQuote ? 'Devis Généré' : (type === 'proforma' ? 'Proforma Générée' : 'Facture Générée'),
+            `${isQuote ? 'Devis' : (type === 'proforma' ? 'Facture Proforma' : 'Facture')} générée. Transmission aux services FNE...`
+        );
         navigate(type === 'quote' ? '/dashboard/quotes' : (type === 'proforma' ? '/dashboard/proformas' : '/dashboard/invoices'));
+    };
+
+    const handleSaveDraft = async () => {
+        await showAlert.success('Brouillon', 'Brouillon enregistré avec succès !');
     };
 
     // MOCK CLIENTS DATA based on FNE examples
@@ -309,7 +317,7 @@ const DocumentForm = ({ type = 'invoice', isPublic = false }) => {
                             {!isPublic && (
                                 <button
                                     type="button"
-                                    onClick={() => alert('Brouillon enregistré avec succès !')}
+                                    onClick={handleSaveDraft}
                                     className="btn btn-light"
                                     style={{ width: '100%', justifyContent: 'center', color: 'var(--text-secondary)', border: '1px solid var(--border-color)', backgroundColor: 'white' }}
                                 >

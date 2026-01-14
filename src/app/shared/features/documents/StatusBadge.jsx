@@ -14,7 +14,7 @@ const STATUS_COLORS = {
 
     // Invoice specific
     pending_commission: { bg: '#FEF3C7', color: '#D97706', label: 'Commission en attente' },
-    fne_generated: { bg: '#DCFCE7', color: '#16A34A', label: 'Facture FNE Envoyée' },
+    fne_generated: { bg: '#DCFCE7', color: '#16A34A', label: 'FNE Reçu' },
     verifying: { bg: '#E0F2FE', color: '#0369A1', label: 'Payé - En vérification' },
     pending_fne: { bg: '#FEF3C7', color: '#B45309', label: 'Attente FNE' },
 
@@ -23,7 +23,7 @@ const STATUS_COLORS = {
     failed: { bg: '#FEE2E2', color: '#DC2626', label: 'Échoué' },
 };
 
-const StatusBadge = ({ status }) => {
+const StatusBadge = ({ status, label }) => {
     const config = STATUS_COLORS[status.toLowerCase()] || STATUS_COLORS.draft;
 
     return (
@@ -39,7 +39,7 @@ const StatusBadge = ({ status }) => {
             textTransform: 'uppercase',
             letterSpacing: '0.025em'
         }}>
-            {config.label}
+            {label || config.label}
         </span>
     );
 };

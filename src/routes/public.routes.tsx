@@ -65,12 +65,18 @@ export const PublicRoutes = (
                 <Route path="invoices" element={<InvoiceListPage />} />
                 <Route path="invoices/new" element={<InvoiceCreatePage />} />
                 <Route path="invoices/:id" element={<InvoiceDetailPage />} />
+                <Route path="invoices/edit/:id" element={<InvoiceCreatePage />} />
                 <Route path="quotes" element={<QuoteListPage />} />
                 <Route path="quotes/new" element={<QuoteCreatePage />} />
+                <Route path="quotes/:id" element={<InvoiceDetailPage />} />
+                <Route path="quotes/edit/:id" element={<QuoteCreatePage />} />
                 <Route path="proformas" element={<ProformaListPage />} />
                 <Route path="proformas/new" element={<ProformaCreatePage />} />
+                <Route path="proformas/:id" element={<InvoiceDetailPage />} />
+                <Route path="proformas/edit/:id" element={<ProformaCreatePage />} />
                 <Route path="clients" element={<ClientListPage />} />
                 <Route path="clients/new" element={<ClientCreatePage />} />
+                <Route path="clients/edit/:id" element={<ClientCreatePage />} />
                 <Route path="payments" element={<PaymentListPage />} />
                 <Route path="commissions" element={<CommissionListPage />} />
                 <Route path="payouts" element={<PayoutListPage />} />

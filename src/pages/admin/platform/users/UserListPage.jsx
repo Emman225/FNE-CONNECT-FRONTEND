@@ -1,10 +1,13 @@
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Plus, MoreVertical, Edit2, Trash2, Filter, Shield, User, Download, Lock } from 'lucide-react';
-
+import { useNotifications } from '../../../../context/NotificationContext';
 
 import { userRoles, roleLabels } from '../../../../types/roles';
 import { mockUsers as MOCK_USERS } from '../../../../data/mockUsers';
+import AddUserModal from './AddUserModal';
+import DataTable from '../../../../components/ui/DataTable/DataTable';
+import showAlert from '../../../../utils/sweetAlert';
 
 // Helper to get role badge color
 const getRoleBadgeStyle = (role) => {
@@ -20,33 +23,169 @@ const getRoleBadgeStyle = (role) => {
 
 const UserListPage = () => {
     const navigate = useNavigate();
+    const { showSuccess } = useNotifications();
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('all');
+    const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+    const [selectedUser, setSelectedUser] = useState(null);
 
     // In a real app, this would be fetched from API
-    // Using simple mock delete for demo
     const [users, setUsers] = useState(MOCK_USERS);
 
-    const handleDelete = (id) => {
-        if (window.confirm('Êtes-vous sûr de vouloir supprimer cet utilisateur ?')) {
+    const handleDelete = async (id) => {
+        const result = await showAlert.confirm(
+            'Suppression',
+            'Êtes-vous sûr de vouloir supprimer cet utilisateur ?',
+            'Supprimer'
+        );
+
+        if (result.isConfirmed) {
             setUsers(users.filter(u => u.id !== id));
+            showSuccess('Utilisateur supprimé avec succès');
         }
     };
 
-    const filteredUsers = useMemo(() => {
+    const handleSaveUser = (userData) => {
+        if (userData.id) {
+            // Update
+            setUsers(users.map(u => u.id === userData.id ? userData : u));
+        } else {
+            // Create
+            const newUser = {
+                ...userData,
+                id: 'u-' + Math.random().toString(36).substr(2, 9),
+                accountNumber: 'FNE-' + Math.floor(10000000 + Math.random() * 90000000).toString(),
+                date_creation: new Date().toISOString()
+            };
+            setUsers([...users, newUser]);
+        }
+        setIsAddUserModalOpen(false);
+    };
+
+    const handleOpenAddModal = () => {
+        setSelectedUser(null);
+        setIsAddUserModalOpen(true);
+    };
+
+    const handleOpenEditModal = (user) => {
+        setSelectedUser(user);
+        setIsAddUserModalOpen(true);
+    };
+
+    // Filter by role only, let DataTable handle search
+    const roleFilteredUsers = useMemo(() => {
         return users.filter(user => {
-            const matchesSearch =
-                user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                user.phone.includes(searchTerm);
-
-            const matchesRole = roleFilter === 'all'
-                ? user.role !== userRoles.VENDOR
-                : user.role === roleFilter;
-
-            return matchesSearch && matchesRole;
+            if (roleFilter === 'all') return user.role !== userRoles.VENDOR;
+            return user.role === roleFilter;
         });
-    }, [searchTerm, roleFilter, users]);
+    }, [roleFilter, users]);
+
+    const columns = [
+        {
+            key: 'accountNumber',
+            label: 'N° Compte',
+            sortable: true,
+            render: (row) => (
+                <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: 'var(--primary)' }}>
+                    {row.accountNumber || '-'}
+                </span>
+            )
+        },
+        {
+            key: 'name',
+            label: 'Utilisateur',
+            sortable: true,
+            render: (row) => (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '50%',
+                        backgroundColor: 'var(--primary-light)',
+                        color: 'var(--primary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        fontSize: '0.875rem',
+                        fontWeight: '600'
+                    }}>
+                        {row.avatar?.charAt(0) || row.name?.charAt(0) || 'U'}
+                    </div>
+                    <div>
+                        <p style={{ fontWeight: '500', color: 'var(--text-main)', margin: 0 }}>{row.name}</p>
+                        <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
+                            Créé le {row.date_creation ? new Date(row.date_creation).toLocaleDateString() : '-'}
+                        </p>
+                    </div>
+                </div>
+            )
+        },
+        {
+            key: 'role',
+            label: 'Rôle',
+            sortable: true,
+            render: (row) => {
+                const roleStyle = getRoleBadgeStyle(row.role);
+                return (
+                    <span style={{
+                        padding: '0.25rem 0.75rem',
+                        borderRadius: '9999px',
+                        backgroundColor: roleStyle.bg,
+                        color: roleStyle.text,
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.25rem'
+                    }}>
+                        {row.role === userRoles.ADMIN && <Shield size={12} />}
+                        {roleLabels[row.role]}
+                    </span>
+                );
+            }
+        },
+        {
+            key: 'email',
+            label: 'Contact',
+            render: (row) => (
+                <div style={{ fontSize: '0.9rem', color: 'var(--text-main)' }}>
+                    <div>{row.email}</div>
+                    <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{row.phone}</div>
+                </div>
+            )
+        },
+        {
+            key: 'statut_compte',
+            label: 'Statut',
+            sortable: true,
+            render: (row) => (
+                <span style={{
+                    padding: '0.25rem 0.75rem',
+                    borderRadius: '9999px',
+                    backgroundColor: row.statut_compte === 'actif' ? 'rgba(57, 180, 154, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                    color: row.statut_compte === 'actif' ? '#059669' : '#ef4444',
+                    fontSize: '0.75rem',
+                    fontWeight: '600'
+                }}>
+                    {row.statut_compte === 'actif' ? 'Actif' : 'Suspendu'}
+                </span>
+            )
+        }
+    ];
+
+    const actions = [
+        {
+            label: 'Modifier',
+            icon: <Edit2 size={16} />,
+            onClick: (row) => handleOpenEditModal(row)
+        },
+        {
+            label: 'Supprimer',
+            icon: <Trash2 size={16} />,
+            variant: 'danger',
+            onClick: (row) => handleDelete(row.id)
+        }
+    ];
 
     return (
         <div className="fade-in">
@@ -61,7 +200,7 @@ const UserListPage = () => {
                     </p>
                 </div>
                 <button
-                    onClick={() => navigate('/admin/dashboard/users/new')}
+                    onClick={handleOpenAddModal}
                     className="btn btn-primary"
                     style={{ padding: '0.75rem 1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}
                 >
@@ -70,189 +209,43 @@ const UserListPage = () => {
                 </button>
             </div>
 
-            {/* Filters */}
-            <div style={{
-                backgroundColor: 'white',
-                padding: '1rem',
-                borderRadius: 'var(--radius-lg)',
-                border: '1px solid var(--border-color)',
-                marginBottom: '1.5rem',
-                display: 'flex',
-                gap: '1rem',
-                alignItems: 'center',
-                flexWrap: 'wrap'
-            }}>
-                <div style={{ position: 'relative', flex: 1, minWidth: '250px' }}>
-                    <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
-                    <input
-                        type="text"
-                        placeholder="Rechercher par nom, email ou téléphone..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        style={{
-                            width: '100%',
-                            padding: '0.625rem 0.625rem 0.625rem 2.5rem',
-                            borderRadius: 'var(--radius-md)',
-                            border: '1px solid var(--border-color)',
-                            fontSize: '0.9rem',
-                            outline: 'none'
-                        }}
-                    />
-                </div>
-
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Filter size={18} color="var(--text-secondary)" />
-                    <select
-                        value={roleFilter}
-                        onChange={(e) => setRoleFilter(e.target.value)}
-                        style={{
-                            padding: '0.625rem',
-                            borderRadius: 'var(--radius-md)',
-                            border: '1px solid var(--border-color)',
-                            fontSize: '0.9rem',
-                            backgroundColor: 'white',
-                            minWidth: '150px'
-                        }}
-                    >
-                        <option value="all">Tous les rôles</option>
-                        {Object.values(userRoles)
-                            .filter(role => role !== userRoles.VENDOR)
-                            .map(role => (
-                                <option key={role} value={role}>{roleLabels[role]}</option>
-                            ))}
-                    </select>
-                </div>
-            </div>
-
-            {/* Table */}
-            <div style={{
-                backgroundColor: 'white',
-                borderRadius: 'var(--radius-lg)',
-                border: '1px solid var(--border-color)',
-                overflow: 'hidden'
-            }}>
-                <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                            <tr style={{ backgroundColor: 'var(--bg-main)', borderBottom: '1px solid var(--border-color)' }}>
-                                <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Utilisateur</th>
-                                <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Rôle</th>
-                                <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Contact</th>
-                                <th style={{ textAlign: 'left', padding: '1rem', fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Statut</th>
-                                <th style={{ textAlign: 'right', padding: '1rem', fontSize: '0.75rem', fontWeight: '600', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredUsers.map((user) => {
-                                const roleStyle = getRoleBadgeStyle(user.role);
-                                return (
-                                    <tr key={user.id} style={{ borderBottom: '1px solid var(--border-color)' }} className="hover-bg-light">
-                                        <td style={{ padding: '1rem' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                                <div style={{
-                                                    width: '40px',
-                                                    height: '40px',
-                                                    borderRadius: '50%',
-                                                    backgroundColor: 'var(--primary-light)',
-                                                    color: 'var(--primary)',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                    fontSize: '0.875rem',
-                                                    fontWeight: '600'
-                                                }}>
-                                                    {user.avatar || 'U'}
-                                                </div>
-                                                <div>
-                                                    <p style={{ fontWeight: '500', color: 'var(--text-main)', margin: 0 }}>{user.name}</p>
-                                                    <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
-                                                        Créé le {user.date_creation ? new Date(user.date_creation).toLocaleDateString() : '-'}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td style={{ padding: '1rem' }}>
-                                            <span style={{
-                                                padding: '0.25rem 0.75rem',
-                                                borderRadius: '9999px',
-                                                backgroundColor: roleStyle.bg,
-                                                color: roleStyle.text,
-                                                fontSize: '0.75rem',
-                                                fontWeight: '600',
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                gap: '0.25rem'
-                                            }}>
-                                                {user.role === userRoles.ADMIN && <Shield size={12} />}
-                                                {roleLabels[user.role]}
-                                            </span>
-                                        </td>
-                                        <td style={{ padding: '1rem' }}>
-                                            <div style={{ fontSize: '0.9rem', color: 'var(--text-main)' }}>
-                                                <div>{user.email}</div>
-                                                <div style={{ color: 'var(--text-secondary)', fontSize: '0.8rem' }}>{user.phone}</div>
-                                            </div>
-                                        </td>
-                                        <td style={{ padding: '1rem' }}>
-                                            <span style={{
-                                                padding: '0.25rem 0.75rem',
-                                                borderRadius: '9999px',
-                                                backgroundColor: user.statut_compte === 'actif' ? 'rgba(57, 180, 154, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                                                color: user.statut_compte === 'actif' ? '#059669' : '#ef4444',
-                                                fontSize: '0.75rem',
-                                                fontWeight: '600'
-                                            }}>
-                                                {user.statut_compte === 'actif' ? 'Actif' : 'Suspendu'}
-                                            </span>
-                                        </td>
-                                        <td style={{ padding: '1rem', textAlign: 'right' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                                                <button
-                                                    onClick={() => navigate(`/admin/dashboard/users/${user.id}`)} // Should go to edit page, id is enough
-                                                    style={{
-                                                        padding: '0.5rem',
-                                                        borderRadius: 'var(--radius-md)',
-                                                        border: '1px solid var(--border-color)',
-                                                        backgroundColor: 'white',
-                                                        color: 'var(--text-secondary)',
-                                                        cursor: 'pointer',
-                                                        transition: 'all 0.2s'
-                                                    }}
-                                                    title="Modifier"
-                                                >
-                                                    <Edit2 size={16} />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(user.id)}
-                                                    style={{
-                                                        padding: '0.5rem',
-                                                        borderRadius: 'var(--radius-md)',
-                                                        border: '1px solid var(--danger-light)',
-                                                        backgroundColor: 'var(--danger-light)', // Light red bg
-                                                        color: 'var(--danger)',
-                                                        cursor: 'pointer',
-                                                        transition: 'all 0.2s'
-                                                    }}
-                                                    title="Supprimer"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                )
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-
-                {filteredUsers.length === 0 && (
-                    <div style={{ padding: '3rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                        <User size={48} style={{ opacity: 0.2, marginBottom: '1rem' }} />
-                        <p>Aucun utilisateur trouvé.</p>
+            <DataTable
+                columns={columns}
+                data={roleFilteredUsers}
+                actions={actions}
+                searchPlaceholder="Rechercher par nom, email ou téléphone..."
+                selectable
+                renderToolbar={
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Filter size={16} color="var(--text-secondary)" />
+                        <select
+                            value={roleFilter}
+                            onChange={(e) => setRoleFilter(e.target.value)}
+                            style={{
+                                padding: '0.5rem',
+                                borderRadius: 'var(--radius-md)',
+                                border: '1px solid var(--border-color)',
+                                fontSize: '0.875rem',
+                                backgroundColor: 'white',
+                                minWidth: '150px'
+                            }}
+                        >
+                            <option value="all">Tous les rôles</option>
+                            {Object.values(userRoles)
+                                .filter(role => role !== userRoles.VENDOR)
+                                .map(role => (
+                                    <option key={role} value={role}>{roleLabels[role]}</option>
+                                ))}
+                        </select>
                     </div>
-                )}
-            </div>
+                }
+            />
+            <AddUserModal
+                isOpen={isAddUserModalOpen}
+                onClose={() => setIsAddUserModalOpen(false)}
+                onSave={handleSaveUser}
+                user={selectedUser}
+            />
         </div>
     );
 };

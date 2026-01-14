@@ -99,25 +99,15 @@ const DocumentHistoryTimeline = ({ document }) => {
         });
     }
 
-    // Sort by date (most recent first)
-    timelineEvents.sort((a, b) => new Date(b.date) - new Date(a.date));
+    // Sort by date (most recent first) - handle potential invalid dates
+    timelineEvents.sort((a, b) => {
+        const dateA = a.date ? new Date(a.date).getTime() : 0;
+        const dateB = b.date ? new Date(b.date).getTime() : 0;
+        return dateB - dateA;
+    });
 
     return (
-        <div style={{
-            backgroundColor: 'white',
-            borderRadius: 'var(--radius-lg)',
-            padding: '1.5rem',
-            border: '1px solid var(--border-color)'
-        }}>
-            <h3 style={{
-                fontSize: '1.125rem',
-                fontWeight: '700',
-                marginBottom: '1.5rem',
-                color: 'var(--text-main)'
-            }}>
-                Historique du Document
-            </h3>
-
+        <div style={{ position: 'relative' }}>
             <div style={{ position: 'relative' }}>
                 {/* Timeline line */}
                 <div style={{
@@ -188,7 +178,7 @@ const DocumentHistoryTimeline = ({ document }) => {
                                             whiteSpace: 'nowrap',
                                             marginLeft: '1rem'
                                         }}>
-                                            {format(new Date(event.date), 'dd MMM yyyy, HH:mm', { locale: fr })}
+                                            {event.date ? format(new Date(event.date), 'dd MMM yyyy, HH:mm', { locale: fr }) : 'Date inconnue'}
                                         </span>
                                     </div>
                                     <p style={{

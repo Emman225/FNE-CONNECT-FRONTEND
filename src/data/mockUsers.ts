@@ -4,6 +4,7 @@ import { userRoles } from '../types/roles';
 export const mockUsers = [
     {
         id: '1',
+        accountNumber: 'FNE-25897201',
         name: 'Vendeur Test',
         email: 'vendor@fne.ci',
         password: 'vendor',
@@ -12,6 +13,7 @@ export const mockUsers = [
     },
     {
         id: '2',
+        accountNumber: 'FNE-25897202',
         name: 'Admin Général',
         email: 'admin@fne.ci',
         password: 'admin',
@@ -20,6 +22,7 @@ export const mockUsers = [
     },
     {
         id: '3',
+        accountNumber: 'FNE-25897203',
         name: 'Marie Koné',
         email: 'compliance@fne.ci',
         password: 'compliance',
@@ -28,6 +31,7 @@ export const mockUsers = [
     },
     {
         id: '4',
+        accountNumber: 'FNE-25897204',
         name: 'Jean Finance',
         email: 'finance@fne.ci',
         password: 'finance',
@@ -36,6 +40,7 @@ export const mockUsers = [
     },
     {
         id: '5',
+        accountNumber: 'FNE-25897205',
         name: 'Support Client',
         email: 'support@fne.ci',
         password: 'support',
@@ -44,6 +49,7 @@ export const mockUsers = [
     },
     {
         id: '6',
+        accountNumber: 'FNE-25897206',
         name: 'Auditeur Externe',
         email: 'auditor@fne.ci',
         password: 'auditor',

@@ -1,22 +1,65 @@
 import React from 'react';
-import DocumentForm from '../../../app/shared/features/documents/DocumentForm';
-import { ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import InvoiceForm from '../../../components/forms/InvoiceForm/InvoiceForm';
+import { DocumentType } from '../../../types/invoice.types';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useDashboardPath } from '../../../hooks/useDashboardPath';
+import showAlert from '../../../utils/sweetAlert';
 
 const QuoteCreatePage = () => {
+    const navigate = useNavigate();
+    const { id } = useParams();
+    const isEditMode = !!id;
     const { basePath } = useDashboardPath();
-    return (
-        <div>
-            <div style={{ marginBottom: '2rem' }}>
-                <Link to={`${basePath}/quotes`} style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--text-muted)', textDecoration: 'none', marginBottom: '1rem' }} className="hover:text-primary transition-colors">
-                    <ArrowLeft size={16} /> Retour aux devis
-                </Link>
-                <h1 style={{ fontSize: '1.875rem', fontWeight: '800', color: 'var(--primary)', letterSpacing: '-0.025em' }}>Nouveau Devis</h1>
-            </div>
 
-            <DocumentForm type="quote" />
-        </div>
+    const handleSubmit = async (data) => {
+        try {
+            console.log('Submitting quote:', data);
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            await showAlert.success(
+                isEditMode ? 'Devis Modifié' : 'Devis Créé',
+                isEditMode ? 'Le devis a été modifié avec succès.' : 'Le devis a été créé avec succès.'
+            );
+            navigate(`${basePath}/quotes`);
+        } catch (error) {
+            console.error('Error saving quote:', error);
+            showAlert.error('Erreur', 'Erreur lors de l\'enregistrement du devis');
+        }
+    };
+
+    const handleSaveDraft = async (data) => {
+        try {
+            console.log('Saving draft quote:', data);
+            await new Promise(resolve => setTimeout(resolve, 500));
+            showAlert.success('Brouillon', 'Brouillon sauvegardé avec succès !');
+        } catch (error) {
+            console.error('Error saving draft:', error);
+            showAlert.error('Erreur', 'Erreur lors de la sauvegarde du brouillon');
+        }
+    };
+
+    const handleCancel = async () => {
+        const result = await showAlert.confirm(
+            'Annuler',
+            'Voulez-vous vraiment annuler ? Toutes les modifications seront perdues.',
+            'Oui, quitter',
+            'Continuer'
+        );
+
+        if (result.isConfirmed) {
+            navigate(`${basePath}/quotes`);
+        }
+    };
+
+    return (
+        <InvoiceForm
+            invoiceId={id}
+            initialData={{
+                documentType: DocumentType.QUOTE
+            }}
+            onSubmit={handleSubmit}
+            onSaveDraft={handleSaveDraft}
+            onCancel={handleCancel}
+        />
     );
 };
 

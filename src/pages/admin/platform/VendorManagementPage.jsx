@@ -3,19 +3,26 @@ import Card from '../../../components/ui/Card';
 import Button from '../../../components/ui/Button';
 import StatusBadge from '../../../app/shared/features/documents/StatusBadge';
 import { useNavigate } from 'react-router-dom';
-import { Users, Search, Filter, Download, Eye, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Users, Search, Filter, Download, Eye, CheckCircle, XCircle, Clock, Edit2, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useNotifications } from '../../../context/NotificationContext';
+import AddVendorModal from './AddVendorModal';
+import DataTable from '../../../components/ui/DataTable/DataTable';
+import showAlert from '../../../utils/sweetAlert';
 
 const VendorManagementPage = () => {
     const navigate = useNavigate();
-    const { showSuccess, showWarning } = useNotifications();
+    const { showSuccess, showWarning, showError } = useNotifications();
+
+    const [isAddVendorModalOpen, setIsAddVendorModalOpen] = useState(false);
+    const [selectedVendor, setSelectedVendor] = useState(null);
 
     // Mock vendor data
-    const [vendors] = useState([
+    const [vendors, setVendors] = useState([
         {
             id: 'V001',
+            accountNumber: 'FNE-25897101',
             name: 'Mamadou Diallo',
             email: 'mamadou.diallo@example.com',
             phone: '+221 77 123 45 67',
@@ -25,10 +32,13 @@ const VendorManagementPage = () => {
             accountStatus: 'active',
             totalSales: 15750000,
             commissionsPaid: 472500,
-            documentsCount: 45
+            documentsCount: 45,
+            clientType: 'B2B',
+            ncc: 'NCC-00123'
         },
         {
             id: 'V002',
+            accountNumber: 'FNE-25897102',
             name: 'Fatou Sow',
             email: 'fatou.sow@example.com',
             phone: '+221 76 234 56 78',
@@ -38,10 +48,13 @@ const VendorManagementPage = () => {
             accountStatus: 'active',
             totalSales: 8500000,
             commissionsPaid: 255000,
-            documentsCount: 28
+            documentsCount: 28,
+            clientType: 'B2B',
+            ncc: 'NCC-99887'
         },
         {
             id: 'V003',
+            accountNumber: 'FNE-25897103',
             name: 'Ibrahima Fall',
             email: 'ibrahima.fall@example.com',
             phone: '+221 78 345 67 89',
@@ -51,10 +64,12 @@ const VendorManagementPage = () => {
             accountStatus: 'suspended',
             totalSales: 3200000,
             commissionsPaid: 96000,
-            documentsCount: 12
+            documentsCount: 12,
+            clientType: 'B2B'
         },
         {
             id: 'V004',
+            accountNumber: 'FNE-25897104',
             name: 'Aissatou Ndiaye',
             email: 'aissatou.ndiaye@example.com',
             phone: '+221 77 456 78 90',
@@ -64,19 +79,15 @@ const VendorManagementPage = () => {
             accountStatus: 'active',
             totalSales: 12300000,
             commissionsPaid: 369000,
-            documentsCount: 38
+            documentsCount: 38,
+            clientType: 'B2C'
         }
     ]);
 
-    const [searchTerm, setSearchTerm] = useState('');
     const [statusFilter, setStatusFilter] = useState('all');
 
-    const filteredVendors = vendors.filter(vendor => {
-        const matchesSearch = vendor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            vendor.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            vendor.company.toLowerCase().includes(searchTerm.toLowerCase());
-        const matchesStatus = statusFilter === 'all' || vendor.accountStatus === statusFilter;
-        return matchesSearch && matchesStatus;
+    const statusFilteredVendors = vendors.filter(vendor => {
+        return statusFilter === 'all' || vendor.accountStatus === statusFilter;
     });
 
     const getKycStatusColor = (status) => {
@@ -89,38 +100,199 @@ const VendorManagementPage = () => {
     };
 
     const handleApproveKyc = (vendor) => {
+        setVendors(vendors.map(v => v.id === vendor.id ? { ...v, kycStatus: 'approved' } : v));
         showSuccess(`KYC approuvé pour ${vendor.name}`);
     };
 
     const handleRejectKyc = (vendor) => {
+        setVendors(vendors.map(v => v.id === vendor.id ? { ...v, kycStatus: 'rejected' } : v));
         showWarning(`KYC rejeté pour ${vendor.name}`);
     };
 
     const handleSuspendAccount = (vendor) => {
-        showWarning(`Compte suspendu pour ${vendor.name}`);
+        const newStatus = vendor.accountStatus === 'active' ? 'suspended' : 'active';
+        setVendors(vendors.map(v => v.id === vendor.id ? { ...v, accountStatus: newStatus } : v));
+        showWarning(`Compte ${newStatus === 'active' ? 'réactivé' : 'suspendu'} pour ${vendor.name}`);
     };
+
+    const handleDeleteVendor = async (id) => {
+        const result = await showAlert.confirm(
+            'Suppression',
+            'Êtes-vous sûr de vouloir supprimer ce vendeur ?',
+            'Supprimer'
+        );
+
+        if (result.isConfirmed) {
+            setVendors(vendors.filter(v => v.id !== id));
+            showSuccess('Vendeur supprimé avec succès');
+        }
+    };
+
+    const handleSaveVendor = (vendorData) => {
+        if (selectedVendor) {
+            // Update
+            setVendors(vendors.map(v => v.id === selectedVendor.id ? {
+                ...v,
+                name: vendorData.clientName,
+                email: vendorData.clientEmail,
+                phone: vendorData.clientPhone,
+                company: vendorData.clientName,
+                ncc: vendorData.clientNcc,
+                clientType: vendorData.clientType,
+                currency: vendorData.currency,
+                exchangeRate: vendorData.exchangeRate
+            } : v));
+            showSuccess('Vendeur mis à jour avec succès !');
+        } else {
+            // Create
+            const newVendor = {
+                id: 'V' + Math.floor(Math.random() * 1000),
+                accountNumber: 'FNE-' + Math.floor(10000000 + Math.random() * 90000000).toString(),
+                name: vendorData.clientName,
+                email: vendorData.clientEmail,
+                phone: vendorData.clientPhone,
+                company: vendorData.clientName,
+                ncc: vendorData.clientNcc,
+                clientType: vendorData.clientType,
+                registeredAt: new Date().toISOString(),
+                kycStatus: 'pending',
+                accountStatus: 'active',
+                totalSales: 0,
+                commissionsPaid: 0,
+                documentsCount: 0
+            };
+            setVendors([...vendors, newVendor]);
+            showSuccess('Vendeur ajouté avec succès !');
+        }
+        setIsAddVendorModalOpen(false);
+    };
+
+    const handleOpenAddModal = () => {
+        setSelectedVendor(null);
+        setIsAddVendorModalOpen(true);
+    };
+
+    const handleOpenEditModal = (vendor) => {
+        setSelectedVendor(vendor);
+        setIsAddVendorModalOpen(true);
+    };
+
+    const columns = [
+        {
+            key: 'accountNumber',
+            label: 'N° Compte',
+            sortable: true,
+            render: (row) => (
+                <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: 'var(--primary)' }}>
+                    {row.accountNumber}
+                </span>
+            )
+        },
+        {
+            key: 'name',
+            label: 'Vendeur',
+            sortable: true,
+            render: (row) => (
+                <div>
+                    <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>{row.name}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{row.email}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{row.phone}</div>
+                </div>
+            )
+        },
+        {
+            key: 'company',
+            label: 'Entreprise',
+            sortable: true
+        },
+        {
+            key: 'kycStatus',
+            label: 'KYC',
+            sortable: true,
+            render: (row) => {
+                const kycStyle = getKycStatusColor(row.kycStatus);
+                return (
+                    <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        padding: '0.25rem 0.75rem',
+                        borderRadius: '9999px',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        backgroundColor: kycStyle.bg,
+                        color: kycStyle.color,
+                        border: `1px solid ${kycStyle.border}`,
+                        textTransform: 'uppercase'
+                    }}>
+                        {row.kycStatus === 'approved' ? 'Approuvé' : row.kycStatus === 'pending' ? 'En attente' : 'Rejeté'}
+                    </span>
+                );
+            }
+        },
+        {
+            key: 'accountStatus',
+            label: 'Statut',
+            sortable: true,
+            render: (row) => (
+                <span style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    padding: '0.25rem 0.75rem',
+                    borderRadius: '9999px',
+                    fontSize: '0.75rem',
+                    fontWeight: '600',
+                    backgroundColor: row.accountStatus === 'active' ? 'var(--success-light)' : '#FEE2E2',
+                    color: row.accountStatus === 'active' ? 'var(--success)' : '#DC2626',
+                    textTransform: 'uppercase'
+                }}>
+                    {row.accountStatus === 'active' ? 'Actif' : 'Suspendu'}
+                </span>
+            )
+        }
+    ];
+
+    const actions = [
+        {
+            label: 'Modifier',
+            icon: <Edit2 size={16} />,
+            onClick: (row) => handleOpenEditModal(row)
+        },
+        {
+            label: 'Approuver KYC',
+            icon: <CheckCircle size={16} />,
+            show: (row) => row.kycStatus === 'pending',
+            onClick: (row) => handleApproveKyc(row)
+        },
+        {
+            label: 'Rejeter KYC',
+            icon: <XCircle size={16} />,
+            show: (row) => row.kycStatus === 'pending',
+            onClick: (row) => handleRejectKyc(row)
+        },
+        {
+            label: 'Suspendre/Activer',
+            icon: <Clock size={16} />,
+            onClick: (row) => handleSuspendAccount(row)
+        },
+        {
+            label: 'Supprimer',
+            icon: <Trash2 size={16} />,
+            variant: 'danger',
+            onClick: (row) => handleDeleteVendor(row.id)
+        }
+    ];
 
     return (
         <div>
             <div className="flex-between" style={{ marginBottom: '2.5rem' }}>
                 <div>
-                    <h1 style={{
-                        fontSize: '1.875rem',
-                        fontWeight: '800',
-                        color: 'var(--primary)',
-                        letterSpacing: '-0.025em',
-                        marginBottom: '0.5rem'
-                    }}>
+                    <h1 style={{ fontSize: '1.875rem', fontWeight: '800', color: 'var(--primary)', marginBottom: '0.5rem' }}>
                         Gestion des Vendeurs
                     </h1>
                     <p className="text-muted">Gérez les vendeurs, validez les KYC et surveillez l'activité.</p>
                 </div>
                 <div style={{ display: 'flex', gap: '1rem' }}>
-                    <button
-                        onClick={() => navigate('/admin/dashboard/users/new')}
-                        className="btn btn-primary"
-                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-                    >
+                    <button onClick={handleOpenAddModal} className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                         <Users size={18} /> Ajouter un Vendeur
                     </button>
                     <button className="btn btn-light" style={{ border: '1px solid var(--border-color)' }}>
@@ -129,286 +301,37 @@ const VendorManagementPage = () => {
                 </div>
             </div>
 
-            {/* Stats Cards */}
-            <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
-                gap: '1.5rem',
-                marginBottom: '2.5rem'
-            }}>
-                <Card style={{ padding: '1.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <div style={{
-                            padding: '0.75rem',
-                            backgroundColor: 'var(--primary-lighter)',
-                            borderRadius: 'var(--radius-lg)'
-                        }}>
-                            <Users size={24} color="var(--primary)" />
-                        </div>
-                        <div>
-                            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
-                                Total Vendeurs
-                            </p>
-                            <h3 style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--text-main)' }}>
-                                {vendors.length}
-                            </h3>
-                        </div>
-                    </div>
-                </Card>
-
-                <Card style={{ padding: '1.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <div style={{
-                            padding: '0.75rem',
-                            backgroundColor: 'var(--success-light)',
-                            borderRadius: 'var(--radius-lg)'
-                        }}>
-                            <CheckCircle size={24} color="var(--success)" />
-                        </div>
-                        <div>
-                            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
-                                KYC Approuvés
-                            </p>
-                            <h3 style={{ fontSize: '1.75rem', fontWeight: '700', color: 'var(--success)' }}>
-                                {vendors.filter(v => v.kycStatus === 'approved').length}
-                            </h3>
-                        </div>
-                    </div>
-                </Card>
-
-                <Card style={{ padding: '1.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <div style={{
-                            padding: '0.75rem',
-                            backgroundColor: '#FEF3C7',
-                            borderRadius: 'var(--radius-lg)'
-                        }}>
-                            <Clock size={24} color="#D97706" />
-                        </div>
-                        <div>
-                            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
-                                KYC En Attente
-                            </p>
-                            <h3 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#D97706' }}>
-                                {vendors.filter(v => v.kycStatus === 'pending').length}
-                            </h3>
-                        </div>
-                    </div>
-                </Card>
-
-                <Card style={{ padding: '1.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <div style={{
-                            padding: '0.75rem',
-                            backgroundColor: '#FEE2E2',
-                            borderRadius: 'var(--radius-lg)'
-                        }}>
-                            <XCircle size={24} color="#DC2626" />
-                        </div>
-                        <div>
-                            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
-                                Comptes Suspendus
-                            </p>
-                            <h3 style={{ fontSize: '1.75rem', fontWeight: '700', color: '#DC2626' }}>
-                                {vendors.filter(v => v.accountStatus === 'suspended').length}
-                            </h3>
-                        </div>
-                    </div>
-                </Card>
-            </div>
-
-            {/* Search and Filters */}
-            <Card style={{ padding: '1.5rem', marginBottom: '2rem' }}>
-                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                    <div style={{ flex: 1, minWidth: '300px', position: 'relative' }}>
-                        <Search size={18} style={{
-                            position: 'absolute',
-                            left: '1rem',
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            color: 'var(--text-secondary)'
-                        }} />
-                        <input
-                            type="text"
-                            placeholder="Rechercher par nom, email ou entreprise..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            style={{
-                                width: '100%',
-                                padding: '0.75rem 1rem 0.75rem 3rem',
-                                border: '1px solid var(--border-color)',
-                                borderRadius: 'var(--radius-md)',
-                                fontSize: '0.9375rem'
-                            }}
-                            className="input-field"
-                        />
-                    </div>
+            <DataTable
+                columns={columns}
+                data={statusFilteredVendors}
+                actions={actions}
+                searchPlaceholder="Rechercher par nom, email ou entreprise..."
+                selectable
+                renderToolbar={
                     <select
                         value={statusFilter}
                         onChange={(e) => setStatusFilter(e.target.value)}
                         style={{
-                            padding: '0.75rem 1rem',
+                            padding: '0.5rem 1rem',
                             border: '1px solid var(--border-color)',
                             borderRadius: 'var(--radius-md)',
-                            fontSize: '0.9375rem',
+                            fontSize: '0.875rem',
                             minWidth: '200px'
                         }}
-                        className="input-field"
                     >
                         <option value="all">Tous les statuts</option>
                         <option value="active">Actifs</option>
                         <option value="suspended">Suspendus</option>
-                        <option value="pending">En attente</option>
                     </select>
-                </div>
-            </Card>
+                }
+            />
 
-            {/* Vendors Table */}
-            <Card style={{ padding: '1.5rem' }}>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '1.5rem', color: 'var(--text-main)' }}>
-                    Liste des Vendeurs ({filteredVendors.length})
-                </h3>
-
-                <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                            <tr style={{ borderBottom: '2px solid var(--border-color)' }}>
-                                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    Vendeur
-                                </th>
-                                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    Entreprise
-                                </th>
-                                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    Inscription
-                                </th>
-                                <th style={{ padding: '1rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    KYC
-                                </th>
-                                <th style={{ padding: '1rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    Statut
-                                </th>
-                                <th style={{ padding: '1rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    CA Total
-                                </th>
-                                <th style={{ padding: '1rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    Actions
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredVendors.map((vendor) => {
-                                const kycStyle = getKycStatusColor(vendor.kycStatus);
-                                return (
-                                    <tr key={vendor.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                                        <td style={{ padding: '1rem' }}>
-                                            <div>
-                                                <div style={{ fontWeight: '600', marginBottom: '0.25rem' }}>{vendor.name}</div>
-                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                                    {vendor.email}
-                                                </div>
-                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-                                                    {vendor.phone}
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td style={{ padding: '1rem', fontSize: '0.875rem' }}>
-                                            {vendor.company}
-                                        </td>
-                                        <td style={{ padding: '1rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                                            {format(new Date(vendor.registeredAt), 'dd MMM yyyy', { locale: fr })}
-                                        </td>
-                                        <td style={{ padding: '1rem', textAlign: 'center' }}>
-                                            <span style={{
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                padding: '0.25rem 0.75rem',
-                                                borderRadius: '9999px',
-                                                fontSize: '0.75rem',
-                                                fontWeight: '600',
-                                                backgroundColor: kycStyle.bg,
-                                                color: kycStyle.color,
-                                                border: `1px solid ${kycStyle.border}`,
-                                                textTransform: 'uppercase'
-                                            }}>
-                                                {vendor.kycStatus === 'approved' && 'Approuvé'}
-                                                {vendor.kycStatus === 'pending' && 'En attente'}
-                                                {vendor.kycStatus === 'rejected' && 'Rejeté'}
-                                            </span>
-                                        </td>
-                                        <td style={{ padding: '1rem', textAlign: 'center' }}>
-                                            <span style={{
-                                                display: 'inline-flex',
-                                                alignItems: 'center',
-                                                padding: '0.25rem 0.75rem',
-                                                borderRadius: '9999px',
-                                                fontSize: '0.75rem',
-                                                fontWeight: '600',
-                                                backgroundColor: vendor.accountStatus === 'active' ? 'var(--success-light)' : '#FEE2E2',
-                                                color: vendor.accountStatus === 'active' ? 'var(--success)' : '#DC2626',
-                                                textTransform: 'uppercase'
-                                            }}>
-                                                {vendor.accountStatus === 'active' ? 'Actif' : 'Suspendu'}
-                                            </span>
-                                        </td>
-                                        <td style={{ padding: '1rem', textAlign: 'right', fontWeight: '600' }}>
-                                            {vendor.totalSales.toLocaleString('fr-FR')} FCFA
-                                        </td>
-                                        <td style={{ padding: '1rem', textAlign: 'right' }}>
-                                            <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
-                                                <button
-                                                    style={{
-                                                        padding: '0.5rem',
-                                                        border: '1px solid var(--border-color)',
-                                                        borderRadius: 'var(--radius-md)',
-                                                        background: 'white',
-                                                        cursor: 'pointer'
-                                                    }}
-                                                    title="Voir détails"
-                                                >
-                                                    <Eye size={16} />
-                                                </button>
-                                                {vendor.kycStatus === 'pending' && (
-                                                    <>
-                                                        <button
-                                                            onClick={() => handleApproveKyc(vendor)}
-                                                            style={{
-                                                                padding: '0.5rem',
-                                                                border: '1px solid var(--success)',
-                                                                borderRadius: 'var(--radius-md)',
-                                                                background: 'white',
-                                                                color: 'var(--success)',
-                                                                cursor: 'pointer'
-                                                            }}
-                                                            title="Approuver KYC"
-                                                        >
-                                                            <CheckCircle size={16} />
-                                                        </button>
-                                                        <button
-                                                            onClick={() => handleRejectKyc(vendor)}
-                                                            style={{
-                                                                padding: '0.5rem',
-                                                                border: '1px solid #EF4444',
-                                                                borderRadius: 'var(--radius-md)',
-                                                                background: 'white',
-                                                                color: '#DC2626',
-                                                                cursor: 'pointer'
-                                                            }}
-                                                            title="Rejeter KYC"
-                                                        >
-                                                            <XCircle size={16} />
-                                                        </button>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </td>
-                                    </tr>
-                                );
-                            })}
-                        </tbody>
-                    </table>
-                </div>
-            </Card>
+            <AddVendorModal
+                isOpen={isAddVendorModalOpen}
+                onClose={() => setIsAddVendorModalOpen(false)}
+                onSave={handleSaveVendor}
+                vendor={selectedVendor}
+            />
         </div>
     );
 };

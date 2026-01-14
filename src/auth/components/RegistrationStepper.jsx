@@ -7,8 +7,8 @@ const RegistrationStepper = ({ currentStep, totalSteps = 7 }) => {
         { number: 2, label: 'Identité', icon: '🪪' },
         { number: 3, label: 'Activité', icon: '💼' },
         { number: 4, label: 'Documents', icon: '📄' },
-        { number: 5, label: 'Paiement', icon: '💳' },
-        { number: 6, label: 'Contrat', icon: '📋' },
+        { number: 5, label: 'Contrat', icon: '📋' },
+        { number: 6, label: 'Paiement', icon: '💳' },
         { number: 7, label: 'Validation', icon: '✓' }
     ];
 

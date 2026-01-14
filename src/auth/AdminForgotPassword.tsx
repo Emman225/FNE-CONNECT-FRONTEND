@@ -1,6 +1,7 @@
 import React, { useState, FormEvent } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowRight, Mail, ArrowLeft, ShieldCheck, CheckCircle } from 'lucide-react';
+import logo from '../assets/logo.png';
 
 const AdminForgotPassword = () => {
     const [email, setEmail] = useState('');
@@ -42,18 +43,14 @@ const AdminForgotPassword = () => {
                 {/* Logo Section */}
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', marginBottom: '2rem' }}>
                     <div style={{
-                        width: '72px',
-                        height: '72px',
-                        background: 'linear-gradient(135deg, #10b981 0%, #0a6fbd 100%)',
-                        borderRadius: '16px',
+                        width: '90px',
+                        height: '90px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        marginBottom: '1rem',
-                        boxShadow: '0 10px 15px -3px rgba(16, 185, 129, 0.3)',
-                        transform: 'rotate(-5deg)'
+                        marginBottom: '1rem'
                     }}>
-                        <ShieldCheck size={40} color="white" />
+                        <img src={logo} alt="FNE Connect Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: 'multiply' }} />
                     </div>
                 </div>
 

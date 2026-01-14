@@ -1,5 +1,6 @@
 import React from 'react';
 import { Zap, Shield, Smartphone, FileText, PieChart, Users } from 'lucide-react';
+import logo from '../../../assets/logo.png';
 import ppqncImage from '../../../assets/ppqnc.jpg';
 
 const FEATURE_ITEMS = [
@@ -114,19 +115,12 @@ const FeaturesSection = () => {
                                     <div style={{
                                         width: '100px',
                                         height: '100px',
-                                        background: 'white',
-                                        borderRadius: '50%',
+                                        background: 'transparent',
                                         display: 'flex',
                                         alignItems: 'center',
-                                        justifyContent: 'center',
-                                        boxShadow: '0 0 30px rgba(0,0,0,0.2)'
+                                        justifyContent: 'center'
                                     }}>
-                                        <div style={{
-                                            color: 'var(--primary)',
-                                            transform: 'scale(2.2)'
-                                        }}>
-                                            <Shield size={24} />
-                                        </div>
+                                        <img src={logo} alt="FNE Connect" style={{ width: '60%', height: '60%', objectFit: 'contain' }} />
                                     </div>
                                 </div>
                             </div>
@@ -206,13 +200,12 @@ const FeaturesSection = () => {
                                 <div style={{
                                     width: '60px',
                                     height: '60px',
-                                    background: 'white',
-                                    borderRadius: '50%',
+                                    background: 'transparent',
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center'
                                 }}>
-                                    <Shield size={24} color="var(--primary)" />
+                                    <img src={logo} alt="FNE Connect" style={{ width: '60%', height: '60%', objectFit: 'contain' }} />
                                 </div>
                             </div>
                         </div>

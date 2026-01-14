@@ -99,12 +99,59 @@
 
 body {
   margin: 0;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
-  background-color: var(--bg-main);
-  color: var(--text-main);
+  padding: 0;
+  font-family: 'Inter', sans-serif;
+  background: var(--bg-main);
+  color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  line-height: 1.5;
+}
+
+/* SweetAlert Premium Customization */
+.premium-swal-popup {
+  border-radius: var(--radius-xl) !important;
+  padding: 2rem !important;
+  font-family: 'Inter', sans-serif !important;
+  border: 1px solid var(--border-color) !important;
+  box-shadow: var(--shadow-xl) !important;
+}
+
+.premium-swal-title {
+  font-family: 'Playfair Display', serif !important;
+  font-weight: 700 !important;
+  color: var(--text-primary) !important;
+  font-size: 1.5rem !important;
+}
+
+.premium-swal-button {
+  padding: 0.75rem 2rem !important;
+  font-weight: 600 !important;
+  border-radius: var(--radius-md) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.025em !important;
+  font-size: 0.875rem !important;
+  box-shadow: var(--shadow-md) !important;
+  transition: all var(--transition-fast) !important;
+}
+
+.premium-swal-button:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+.premium-swal-cancel-button {
+  padding: 0.75rem 2rem !important;
+  font-weight: 600 !important;
+  border-radius: var(--radius-md) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.025em !important;
+  font-size: 0.875rem !important;
+  background-color: transparent !important;
+  color: var(--text-secondary) !important;
+  border: 1px solid var(--border-color) !important;
+}
+
+.premium-swal-cancel-button:hover {
+  background-color: #f1f5f9 !important;
 }
 
 h1,
@@ -483,5 +530,38 @@ button {
 
   100% {
     background-position: -200% 0;
+  }
+}
+
+@media print {
+
+  /* Hide everything and show only the printed document */
+  body * {
+    visibility: hidden;
+  }
+
+  .printable-document,
+  .printable-document * {
+    visibility: visible;
+  }
+
+  .printable-document {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    box-shadow: none !important;
+    border: none !important;
+  }
+
+  /* Hide sidebar, headers, and buttons */
+  .sidebar,
+  header,
+  .btn,
+  .btn-icon,
+  .no-print {
+    display: none !important;
   }
 }

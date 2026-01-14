@@ -1,4 +1,5 @@
 import React, { useState, FormEvent } from 'react';
+import logo from '../assets/logo.png';
 import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, ShieldCheck, Mail, ArrowLeft, CheckCircle } from 'lucide-react';
 
@@ -30,17 +31,16 @@ const VendorForgotPassword = () => {
             <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
                     <div style={{
-                        width: '56px',
-                        height: '56px',
-                        background: 'var(--gradient-dual)',
-                        borderRadius: '16px',
+                        width: '80px',
+                        height: '80px',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        boxShadow: 'var(--shadow-lg)',
-                        transform: 'rotate(-5deg)'
+                        marginBottom: '1rem'
                     }}>
-                        <ShieldCheck size={32} color="white" strokeWidth={2.5} />
+
+
+                        <img src={logo} alt="FNE Connect" style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: 'multiply' }} />
                     </div>
                 </div>
                 <h1 style={{

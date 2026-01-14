@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { CreditCard, Check } from 'lucide-react';
+import { CreditCard, Check, Smartphone } from 'lucide-react';
+import toast from 'react-hot-toast';
 
-const Step5Paiement = ({ data, updateData, onNext, onBack }) => {
-    const [selectedPlan, setSelectedPlan] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState('');
+const Step5Paiement = ({ data, updateData, onSubmit, onBack }) => {
+    // Component logic remains similar, but using onSubmit instead of onNext
+    const [selectedPlan, setSelectedPlan] = useState(data.subscriptionPlan || '');
+    const [paymentMethod, setPaymentMethod] = useState(data.paymentMethod || '');
+    const [paymentPhone, setPaymentPhone] = useState(data.paymentPhone || '');
 
     const plans = [
         {
@@ -38,11 +41,18 @@ const Step5Paiement = ({ data, updateData, onNext, onBack }) => {
 
     const handleSubmit = (e) => {
         e.preventDefault();
+
+        if (!paymentPhone || paymentPhone.length < 10) {
+            toast.error('Veuillez entrer un numéro de téléphone valide pour le paiement.');
+            return;
+        }
+
         updateData({
             subscriptionPlan: selectedPlan,
-            paymentMethod: paymentMethod
+            paymentMethod: paymentMethod,
+            paymentPhone: paymentPhone
         });
-        onNext();
+        onSubmit(); // Call the final submit function
     };
 
     return (
@@ -174,12 +184,10 @@ const Step5Paiement = ({ data, updateData, onNext, onBack }) => {
 
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             {['Orange Money', 'MTN Money', 'Moov Money', 'Wave'].map((method) => (
-                                <label
+                                <div
                                     key={method}
+                                    onClick={() => setPaymentMethod(method)}
                                     style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '1rem',
                                         padding: '1rem',
                                         border: paymentMethod === method ? '2px solid var(--primary)' : '2px solid var(--border-color)',
                                         borderRadius: 'var(--radius-md)',
@@ -188,19 +196,56 @@ const Step5Paiement = ({ data, updateData, onNext, onBack }) => {
                                         transition: 'all 0.2s'
                                     }}
                                 >
-                                    <input
-                                        type="radio"
-                                        name="paymentMethod"
-                                        value={method}
-                                        checked={paymentMethod === method}
-                                        onChange={(e) => setPaymentMethod(e.target.value)}
-                                        style={{ accentColor: 'var(--primary)', cursor: 'pointer', width: '20px', height: '20px' }}
-                                    />
-                                    <CreditCard size={24} color="var(--primary)" />
-                                    <span style={{ fontSize: '1rem', fontWeight: '500', color: 'var(--text-main)' }}>
-                                        {method}
-                                    </span>
-                                </label>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: paymentMethod === method ? '1rem' : '0' }}>
+                                        <div style={{
+                                            width: '20px',
+                                            height: '20px',
+                                            borderRadius: '50%',
+                                            border: `2px solid ${paymentMethod === method ? 'var(--primary)' : 'var(--text-muted)'}`,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center'
+                                        }}>
+                                            {paymentMethod === method && (
+                                                <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--primary)' }} />
+                                            )}
+                                        </div>
+                                        <CreditCard size={24} color={paymentMethod === method ? 'var(--primary)' : 'var(--text-muted)'} />
+                                        <span style={{ fontSize: '1rem', fontWeight: '500', color: 'var(--text-main)' }}>
+                                            {method}
+                                        </span>
+                                    </div>
+
+                                    {/* Mobile Money Number Input - Only shows when selected */}
+                                    {paymentMethod === method && (
+                                        <div
+                                            onClick={(e) => e.stopPropagation()}
+                                            style={{
+                                                marginLeft: '2.25rem',
+                                                animation: 'slideDown 0.3s ease-out'
+                                            }}
+                                        >
+                                            <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-secondary)' }}>
+                                                Numéro {method} pour le paiement <span style={{ color: 'red' }}>*</span>
+                                            </label>
+                                            <div style={{ position: 'relative' }}>
+                                                <Smartphone size={20} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                                                <input
+                                                    type="tel"
+                                                    value={paymentPhone}
+                                                    onChange={(e) => setPaymentPhone(e.target.value.replace(/[^0-9]/g, ''))}
+                                                    placeholder="Entrez le numéro (Ex: 0707...)"
+                                                    className="input-field"
+                                                    style={{ paddingLeft: '2.5rem', width: '100%' }}
+                                                    autoFocus
+                                                />
+                                            </div>
+                                            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
+                                                Le montant sera débité de ce numéro.
+                                            </p>
+                                        </div>
+                                    )}
+                                </div>
                             ))}
                         </div>
 
@@ -213,7 +258,7 @@ const Step5Paiement = ({ data, updateData, onNext, onBack }) => {
                             padding: '1rem'
                         }}>
                             <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', margin: 0 }}>
-                                💡 Après validation, vous recevrez un SMS pour confirmer le paiement via {paymentMethod || 'votre méthode de paiement'}.
+                                💡 Après validation, vous recevrez une demande de paiement sur le numéro indiqué.
                             </p>
                         </div>
                     </div>
@@ -231,19 +276,25 @@ const Step5Paiement = ({ data, updateData, onNext, onBack }) => {
                     </button>
                     <button
                         type="submit"
-                        disabled={!selectedPlan || !paymentMethod}
+                        disabled={!selectedPlan || !paymentMethod || !paymentPhone}
                         className="btn btn-primary"
                         style={{
                             flex: 1,
                             padding: '0.875rem',
-                            opacity: selectedPlan && paymentMethod ? 1 : 0.5,
-                            cursor: selectedPlan && paymentMethod ? 'pointer' : 'not-allowed'
+                            opacity: selectedPlan && paymentMethod && paymentPhone ? 1 : 0.5,
+                            cursor: selectedPlan && paymentMethod && paymentPhone ? 'pointer' : 'not-allowed'
                         }}
                     >
-                        Continuer au paiement →
+                        Confirmer & Créer le compte
                     </button>
                 </div>
             </form>
+            <style>{`
+                @keyframes slideDown {
+                    from { opacity: 0; transform: translateY(-10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+            `}</style>
         </div>
     );
 };

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Menu, X, ShieldCheck, FileText, ClipboardList, LogIn, UserPlus } from 'lucide-react';
+import logo from '../../../assets/logo.png';
 import TopHeader from './TopHeader';
 import { useNavigate, useLocation } from 'react-router-dom';
 
@@ -50,23 +51,9 @@ const Navbar = () => {
                 <div className="container">
                     <div className="flex-between" style={{ height: '65px' }}>
                         {/* Logo */}
+
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }} onClick={() => navigate('/')}>
-                            <div style={{
-                                width: '40px',
-                                height: '40px',
-                                backgroundColor: 'var(--primary)',
-                                borderRadius: '10px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                color: 'white',
-                                boxShadow: 'var(--shadow-md)'
-                            }}>
-                                <ShieldCheck size={24} />
-                            </div>
-                            <span style={{ fontSize: '1.25rem', fontWeight: '800', letterSpacing: '-0.5px', color: 'var(--primary)' }}>
-                                FNE <span style={{ color: 'var(--primary)', opacity: 0.7 }}>CONNECT</span>
-                            </span>
+                            <img src={logo} alt="FNE Connect Logo" style={{ height: '55px', width: 'auto', objectFit: 'contain', mixBlendMode: 'multiply' }} />
                         </div>
 
                         {/* Desktop Menu */}
@@ -109,18 +96,18 @@ const Navbar = () => {
 
                         <div className="hide-on-mobile" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginRight: '0.75rem', paddingRight: '0.75rem', borderRight: '1px solid var(--border-color)' }}>
-                                <button onClick={() => navigate('/tools/invoice')} className="btn btn-outline btn-sm">
-                                    <FileText size={16} />
-                                    Facture
-                                </button>
                                 <button onClick={() => navigate('/tools/proforma')} className="btn btn-outline btn-sm">
                                     <ClipboardList size={16} />
                                     Proforma
                                 </button>
+                                <button onClick={() => navigate('/tools/invoice')} className="btn btn-outline btn-sm">
+                                    <FileText size={16} />
+                                    Facture
+                                </button>
                             </div>
 
-                            <button onClick={() => navigate('/auth/login')} className="btn btn-secondary btn-sm">
-                                <LogIn size={16} />
+                            <button onClick={() => navigate('/auth/login')} className="btn btn-secondary btn-sm" style={{ backgroundColor: '#067ac2', color: 'white', borderColor: '#067ac2' }}>
+                                <LogIn size={16} color="white" />
                                 Se connecter
                             </button>
 
@@ -167,8 +154,8 @@ const Navbar = () => {
                                         Proforma
                                     </button>
                                 </div>
-                                <button onClick={() => navigate('/auth/login')} className="btn btn-secondary btn-sm" style={{ width: '100%' }}>
-                                    <LogIn size={16} />
+                                <button onClick={() => navigate('/auth/login')} className="btn btn-secondary btn-sm" style={{ width: '100%', backgroundColor: '#067ac2', color: 'white', borderColor: '#067ac2' }}>
+                                    <LogIn size={16} color="white" />
                                     Se connecter
                                 </button>
                                 <button onClick={() => navigate('/auth/register')} className="btn btn-primary btn-sm" style={{ width: '100%' }}>

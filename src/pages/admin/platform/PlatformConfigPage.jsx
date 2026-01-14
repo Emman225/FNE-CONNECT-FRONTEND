@@ -1,8 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import Card from '../../../components/ui/Card';
 import Button from '../../../components/ui/Button';
-import { Settings, Save, RotateCcw } from 'lucide-react';
+import { Settings, Save, RotateCcw, Search } from 'lucide-react';
 import { useNotifications } from '../../../context/NotificationContext';
+
+const MOCK_VENDORS = [
+    { id: 1, name: 'Boutique Koumassi', accountNumber: 'FNE-25897001' },
+    { id: 2, name: 'Ets Konan', accountNumber: 'FNE-25897002' },
+    { id: 3, name: 'Marc Konan', accountNumber: 'FNE-25897003' },
+    { id: 4, name: 'Sarl Ivoire', accountNumber: 'FNE-25897004' },
+    { id: 5, name: 'Boutique Luxe', accountNumber: 'FNE-25897005' },
+];
 
 const PlatformConfigPage = () => {
     const { showSuccess } = useNotifications();
@@ -12,6 +20,11 @@ const PlatformConfigPage = () => {
         defaultCommissionRate: 3,
         minCommissionAmount: 1000,
         maxCommissionAmount: 1000000,
+
+        // Specific Commissions
+        specificCommissions: [
+            { id: 1, vendorName: 'Boutique Koumassi', accountNumber: 'FNE-25897001', rate: 2.5 }
+        ],
 
         // Tax Settings
         tvaRate: 18,
@@ -42,8 +55,55 @@ const PlatformConfigPage = () => {
         maintenanceMode: false
     });
 
+    const [newSpecific, setNewSpecific] = useState({ vendorId: '', rate: 0 });
+    const [vendorSearch, setVendorSearch] = useState('');
+    const [showVendorResults, setShowVendorResults] = useState(false);
+
+    const filteredVendors = useMemo(() => {
+        if (!vendorSearch) return MOCK_VENDORS;
+        return MOCK_VENDORS.filter(v =>
+            v.accountNumber.toLowerCase().includes(vendorSearch.toLowerCase()) ||
+            v.name.toLowerCase().includes(vendorSearch.toLowerCase())
+        );
+    }, [vendorSearch]);
+
     const handleChange = (field, value) => {
         setConfig(prev => ({ ...prev, [field]: value }));
+    };
+
+    const handleAddSpecificCommission = () => {
+        if (!newSpecific.vendorId) return;
+        const vendor = MOCK_VENDORS.find(v => v.id === parseInt(newSpecific.vendorId));
+        if (!vendor) return;
+
+        const exists = config.specificCommissions.find(sc => sc.accountNumber === vendor.accountNumber);
+        if (exists) {
+            showSuccess(`Une commission spécifique existe déjà pour ce vendeur.`);
+            return;
+        }
+
+        setConfig(prev => ({
+            ...prev,
+            specificCommissions: [
+                ...prev.specificCommissions,
+                {
+                    id: Date.now(),
+                    vendorName: vendor.name,
+                    accountNumber: vendor.accountNumber,
+                    rate: newSpecific.rate
+                }
+            ]
+        }));
+        setNewSpecific({ vendorId: '', rate: 0 });
+        setVendorSearch('');
+        showSuccess('Commission spécifique ajoutée');
+    };
+
+    const handleRemoveSpecificCommission = (id) => {
+        setConfig(prev => ({
+            ...prev,
+            specificCommissions: prev.specificCommissions.filter(sc => sc.id !== id)
+        }));
     };
 
     const handleSave = () => {
@@ -173,6 +233,147 @@ const PlatformConfigPage = () => {
                                 className="input-field"
                             />
                         </div>
+                    </div>
+                </Card>
+
+                {/* Specific Vendor Commissions */}
+                <Card style={{ padding: '2rem' }}>
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '1.5rem', color: 'var(--text-main)' }}>
+                        Commissions Spécifiques par Vendeur
+                    </h2>
+
+                    <div style={{ background: 'var(--bg-main)', padding: '1.5rem', borderRadius: 'var(--radius-md)', marginBottom: '2rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '1rem', alignItems: 'flex-end' }}>
+                            <div style={{ position: 'relative' }}>
+                                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                                    Vendeur (Recherche par N° Compte ou Nom)
+                                </label>
+                                <div style={{ position: 'relative' }}>
+                                    <input
+                                        type="text"
+                                        placeholder="Saisir N° Compte ou Nom..."
+                                        value={vendorSearch}
+                                        onFocus={() => setShowVendorResults(true)}
+                                        onChange={(e) => {
+                                            setVendorSearch(e.target.value);
+                                            setShowVendorResults(true);
+                                        }}
+                                        style={{
+                                            width: '100%',
+                                            padding: '0.75rem 0.75rem 0.75rem 2.5rem',
+                                            border: '1px solid var(--border-color)',
+                                            borderRadius: 'var(--radius-md)',
+                                            background: 'white'
+                                        }}
+                                    />
+                                    <Search size={18} style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)' }} />
+                                </div>
+
+                                {showVendorResults && (
+                                    <div style={{
+                                        position: 'absolute',
+                                        top: '100%',
+                                        left: 0,
+                                        right: 0,
+                                        backgroundColor: 'white',
+                                        border: '1px solid var(--border-color)',
+                                        borderRadius: 'var(--radius-md)',
+                                        marginTop: '4px',
+                                        boxShadow: 'var(--shadow-lg)',
+                                        zIndex: 10,
+                                        maxHeight: '200px',
+                                        overflowY: 'auto'
+                                    }}>
+                                        {filteredVendors.length > 0 ? (
+                                            filteredVendors.map(v => (
+                                                <div
+                                                    key={v.id}
+                                                    onClick={() => {
+                                                        setNewSpecific(prev => ({ ...prev, vendorId: v.id.toString() }));
+                                                        setVendorSearch(`${v.accountNumber} - ${v.name}`);
+                                                        setShowVendorResults(false);
+                                                    }}
+                                                    style={{
+                                                        padding: '0.75rem 1rem',
+                                                        cursor: 'pointer',
+                                                        borderBottom: '1px solid var(--border-color)',
+                                                        fontSize: '0.9rem'
+                                                    }}
+                                                    onMouseEnter={(e) => e.target.style.backgroundColor = 'var(--bg-main)'}
+                                                    onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
+                                                >
+                                                    <div style={{ fontWeight: '600', color: 'var(--primary)' }}>{v.accountNumber}</div>
+                                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>{v.name}</div>
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.875rem' }}>
+                                                Aucun vendeur trouvé
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                            <div>
+                                <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>
+                                    Taux de commission (%)
+                                </label>
+                                <input
+                                    type="number"
+                                    step="0.1"
+                                    value={newSpecific.rate}
+                                    onChange={(e) => setNewSpecific(prev => ({ ...prev, rate: parseFloat(e.target.value) }))}
+                                    style={{
+                                        width: '100%',
+                                        padding: '0.75rem',
+                                        border: '1px solid var(--border-color)',
+                                        borderRadius: 'var(--radius-md)'
+                                    }}
+                                />
+                            </div>
+                            <Button onClick={handleAddSpecificCommission} style={{ padding: '0.75rem 1.5rem' }}>
+                                Ajouter
+                            </Button>
+                        </div>
+                    </div>
+
+                    <div style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)', overflow: 'hidden' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                                <tr style={{ background: 'var(--bg-main)', borderBottom: '1px solid var(--border-color)' }}>
+                                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.8125rem' }}>Vendeur / N° Compte</th>
+                                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.8125rem' }}>Taux (%)</th>
+                                    <th style={{ padding: '1rem', textAlign: 'right', fontSize: '0.8125rem' }}>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {config.specificCommissions.length === 0 ? (
+                                    <tr>
+                                        <td colSpan="3" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                                            Aucune commission spécifique configurée
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    config.specificCommissions.map(sc => (
+                                        <tr key={sc.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                                            <td style={{ padding: '1rem' }}>
+                                                <div style={{ fontWeight: '600' }}>{sc.vendorName}</div>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>{sc.accountNumber}</div>
+                                            </td>
+                                            <td style={{ padding: '1rem' }}>{sc.rate}%</td>
+                                            <td style={{ padding: '1rem', textAlign: 'right' }}>
+                                                <button
+                                                    onClick={() => handleRemoveSpecificCommission(sc.id)}
+                                                    style={{ border: 'none', background: 'none', color: 'var(--danger)', cursor: 'pointer' }}
+                                                >
+                                                    Supprimer
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))
+                                )}
+                            </tbody>
+                        </table>
                     </div>
                 </Card>
 

@@ -1,5 +1,6 @@
 import React, { ReactNode } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
+import logo from '../../assets/logo.png';
 import {
     LayoutDashboard, FileText, Users, CreditCard, Settings,
     FileCheck, ShieldCheck, Wallet, TrendingUp, Shield, UserCog
@@ -175,40 +176,16 @@ const Sidebar = () => {
                 gap: '0.75rem',
                 borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
             }}>
+
+
                 <div style={{
-                    minWidth: '42px',
-                    height: '42px',
-                    background: 'var(--gradient-dual)',
-                    borderRadius: '12px',
+                    minWidth: '55px',
+                    height: '55px',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    boxShadow: 'var(--shadow-lg)',
-                    transition: 'transform var(--transition-normal)'
-                }}
-                    className="hover-lift"
-                >
-                    <ShieldCheck size={24} color="white" strokeWidth={2.5} />
-                </div>
-                <div>
-                    <span style={{
-                        fontSize: '1.25rem',
-                        fontWeight: '800',
-                        color: 'white',
-                        letterSpacing: '-0.5px',
-                        display: 'block',
-                        lineHeight: 1
-                    }}>
-                        FNE <span style={{ color: 'rgba(255, 255, 255, 0.9)' }}>Connect</span>
-                    </span>
-                    <span style={{
-                        fontSize: '0.675rem',
-                        color: 'rgba(255, 255, 255, 0.6)',
-                        fontWeight: '500',
-                        letterSpacing: '0.5px'
-                    }}>
-                        PORTAGE FISCAL
-                    </span>
+                    justifyContent: 'center'
+                }}>
+                    <img src={logo} alt="FNE Connect" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
                 </div>
             </div>
 

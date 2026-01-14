@@ -11,29 +11,57 @@ import { MOCK_PROFORMAS } from '../../../data/mockData';
 import { formatCurrency } from '../../../utils/financialUtils';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { useNotifications } from '../../../context/NotificationContext';
+
+import showAlert from '../../../utils/sweetAlert';
 
 const ProformaListPage = () => {
     const { basePath } = useDashboardPath();
+    const { showSuccess } = useNotifications();
+    const [proformas, setProformas] = useState(MOCK_PROFORMAS);
     const [filterStatus, setFilterStatus] = useState('all');
     const [selectedProforma, setSelectedProforma] = useState(null);
     const [isPaymentOpen, setIsPaymentOpen] = useState(false);
     const navigate = useNavigate();
 
     const filteredProformas = filterStatus === 'all'
-        ? MOCK_PROFORMAS
-        : MOCK_PROFORMAS.filter(p => p.status === filterStatus);
+        ? proformas
+        : proformas.filter(p => p.status === filterStatus);
 
     const handlePay = (proforma) => {
         setSelectedProforma(proforma);
         setIsPaymentOpen(true);
     };
 
-    const handleConvert = (proforma, toType) => {
+    const handleConvert = async (proforma, toType) => {
         if (toType === 'invoice') {
-            if (window.confirm(`Voulez-vous convertir la proforma ${proforma.number} en Facture ?`)) {
-                alert(`Proforma ${proforma.number} convertie en Facture avec succès !`);
+            const result = await showAlert.confirm(
+                'Conversion en Facture',
+                `Voulez-vous convertir la proforma ${proforma.number} en Facture ?`,
+                'Convertir'
+            );
+
+            if (result.isConfirmed) {
+                showSuccess(`Proforma ${proforma.number} convertie en Facture avec succès !`);
                 navigate(`${basePath}/invoices`);
             }
+        }
+    };
+
+    const handleEdit = (proforma) => {
+        navigate(`${basePath}/proformas/edit/${proforma.id}`);
+    };
+
+    const handleDelete = async (proforma) => {
+        const result = await showAlert.confirm(
+            'Suppression',
+            'Êtes-vous sûr de vouloir supprimer cette proforma ?',
+            'Supprimer'
+        );
+
+        if (result.isConfirmed) {
+            setProformas(proformas.filter(p => p.id !== proforma.id));
+            showSuccess('Proforma supprimée avec succès');
         }
     };
 
@@ -208,6 +236,7 @@ const ProformaListPage = () => {
                     documents={filteredProformas.map(p => ({
                         id: p.id,
                         number: p.id,
+                        accountNumber: p.accountNumber,
                         clientName: p.client.name,
                         clientPhone: p.client.phone,
                         date: format(new Date(p.createdAt), 'dd MMM yyyy', { locale: fr }),
@@ -218,6 +247,8 @@ const ProformaListPage = () => {
                     type="proforma"
                     onPay={handlePay}
                     onConvert={handleConvert}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
                 />
             </Card>
 

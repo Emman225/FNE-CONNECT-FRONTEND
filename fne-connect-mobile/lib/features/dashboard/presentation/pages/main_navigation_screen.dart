@@ -3,6 +3,8 @@ import 'home_screen.dart';
 import '../../../documents/presentation/pages/document_list_screen.dart';
 import '../../../clients/presentation/pages/client_list_screen.dart';
 import '../../../finance/presentation/pages/finance_screen.dart';
+import '../../../../core/theme/app_colors.dart';
+import '../../../documents/presentation/pages/create_document_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -25,6 +27,10 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       body: _screens[_currentIndex],
+      floatingActionButton: _buildFab(),
+      floatingActionButtonLocation: _currentIndex == 1 
+          ? const TabItemFabLocation(index: 1, totalCount: 4)
+          : (_currentIndex == 2 ? const TabItemFabLocation(index: 2, totalCount: 4) : null),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
           color: Colors.white,
@@ -65,6 +71,85 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget? _buildFab() {
+    if (_currentIndex == 1) {
+      return FloatingActionButton.extended(
+        onPressed: () => _showCreateDocumentDialog(context),
+        backgroundColor: AppColors.primary,
+        icon: const Icon(Icons.add),
+        label: const Text('Créer'),
+      );
+    } else if (_currentIndex == 2) {
+      return FloatingActionButton.extended(
+        onPressed: () {
+          // TODO: Navigate to add client
+        },
+        backgroundColor: AppColors.primary,
+        icon: const Icon(Icons.person_add),
+        label: const Text('Nouveau Client'),
+      );
+    }
+    return null;
+  }
+
+  void _showCreateDocumentDialog(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Créer un nouveau document',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 24),
+            ListTile(
+              leading: const Icon(Icons.description, color: AppColors.primary),
+              title: const Text('Facture'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const CreateDocumentScreen(documentType: 'invoice')),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.assignment, color: AppColors.secondary),
+              title: const Text('Devis'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const CreateDocumentScreen(documentType: 'quote')),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.receipt_long, color: AppColors.accent),
+              title: const Text('Proforma'),
+              onTap: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const CreateDocumentScreen(documentType: 'proforma')),
+                );
+              },
+            ),
+          ],
         ),
       ),
     );
@@ -118,5 +203,37 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         ),
       ),
     );
+  }
+}
+
+class TabItemFabLocation extends FloatingActionButtonLocation {
+  final int index;
+  final int totalCount;
+
+  const TabItemFabLocation({
+    required this.index,
+    required this.totalCount,
+  });
+
+  @override
+  Offset getOffset(ScaffoldPrelayoutGeometry scaffoldGeometry) {
+    final double width = scaffoldGeometry.scaffoldSize.width;
+    final double itemWidth = width / totalCount;
+    final double fabWidth = scaffoldGeometry.floatingActionButtonSize.width;
+    final double fabHeight = scaffoldGeometry.floatingActionButtonSize.height;
+
+    // Calculate center of the tab
+    // We use a slight offset to account for the gaps in spaceAround
+    final double centerX = itemWidth * index + (itemWidth / 2);
+    
+    final double bottomNavigationBarHeight = scaffoldGeometry.bottomNavigationBarSize.height;
+    
+    // Y position: above bottom navigation bar
+    double fabY = scaffoldGeometry.scaffoldSize.height - fabHeight - 20;
+    if (bottomNavigationBarHeight > 0) {
+      fabY -= bottomNavigationBarHeight;
+    }
+
+    return Offset(centerX - (fabWidth / 2), fabY);
   }
 }
