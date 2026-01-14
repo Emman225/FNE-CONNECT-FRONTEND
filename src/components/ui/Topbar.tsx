@@ -31,13 +31,18 @@ const Topbar = () => {
     }, []);
 
     const handleLogout = () => {
+        // Capture the user role BEFORE clearing
         const currentUserRole = user?.role;
-        logout();
+        const wasAdmin = currentUserRole && isAdminRole(currentUserRole);
 
-        if (currentUserRole && isAdminRole(currentUserRole)) {
-            navigate('/admin');
+        // Clear storage immediately
+        localStorage.removeItem('fne_user');
+
+        // Redirect immediately without triggering React state updates
+        if (wasAdmin) {
+            window.location.href = '/admin';
         } else {
-            navigate('/auth/login');
+            window.location.href = '/auth/login';
         }
     };
 
