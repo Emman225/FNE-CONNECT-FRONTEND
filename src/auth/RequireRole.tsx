@@ -11,16 +11,24 @@ const RequireRole: React.FC<RequireRoleProps> = ({ allowedRoles }) => {
     const { user } = useAuth();
     const location = useLocation();
 
-    if (!user) {
-        // Redirect to login if not authenticated
-        return <Navigate to="/auth/login" state={{ from: location }} replace />;
+    // Safety check for race conditions during navigation
+    const storedUser = !user ? localStorage.getItem('fne_user') : null;
+    const effectiveUser = user || (storedUser ? JSON.parse(storedUser) : null);
+
+    if (!effectiveUser) {
+        // Redirect to appropriate login based on path
+        const isAdminPath = location.pathname.startsWith('/admin');
+        return <Navigate to={isAdminPath ? "/admin" : "/auth/login"} state={{ from: location }} replace />;
     }
 
-    if (!allowedRoles.includes(user.role)) {
-        // Redirect to unauthorized page or dashboard if role is not allowed
-        // For now, redirect to dashboard or show unauthorized message
-        // If user is vendor trying to access admin, go to /dashboard (vendor dashboard)
-        // If user is admin trying to access vendor, go to /admin/dashboard
+    if (!allowedRoles.includes(effectiveUser.role)) {
+        // Redirect to appropriate dashboard if role is not allowed
+        if (effectiveUser.role === 'vendor' && location.pathname.startsWith('/admin')) {
+            return <Navigate to="/dashboard" replace />;
+        }
+        if (location.pathname.startsWith('/dashboard') && effectiveUser.role !== 'vendor') {
+            return <Navigate to="/admin/dashboard" replace />;
+        }
         return <Navigate to="/unauthorized" state={{ from: location }} replace />;
     }
 

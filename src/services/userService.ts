@@ -1,31 +1,58 @@
-// Placeholder service for User API calls
-// TODO: Replace with real Laravel API integration
+import api from './api';
 
-import { User } from '../auth/AuthProvider';
+export interface User {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    role: string;
+    status: string;
+    created_at?: string;
+}
 
+/**
+ * Service pour la gestion des utilisateurs (Admin)
+ */
 export const userService = {
-    async getAll(): Promise<User[]> {
-        // Mock implementation
-        return [];
+    /**
+     * Récupérer tous les utilisateurs internes
+     */
+    getAll: async () => {
+        const response = await api.get('/admin/users');
+        return response.data;
     },
 
-    async getById(id: string): Promise<User | null> {
-        // Mock implementation
-        return null;
+    /**
+     * Voir un utilisateur spécifique
+     */
+    getById: async (id: string) => {
+        const response = await api.get(`/admin/users/${id}`);
+        return response.data;
     },
 
-    async create(data: Partial<User>): Promise<User> {
-        // Mock implementation
-        throw new Error('Not implemented');
+    /**
+     * Créer un nouvel utilisateur
+     */
+    create: async (data: any) => {
+        const response = await api.post('/admin/users', data);
+        return response.data;
     },
 
-    async update(id: string, data: Partial<User>): Promise<User> {
-        // Mock implementation
-        throw new Error('Not implemented');
+    /**
+     * Mettre à jour un utilisateur
+     */
+    update: async (id: string, data: any) => {
+        const response = await api.put(`/admin/users/${id}`, data);
+        return response.data;
     },
 
-    async delete(id: string): Promise<void> {
-        // Mock implementation
-        throw new Error('Not implemented');
+    /**
+     * Supprimer un utilisateur
+     */
+    delete: async (id: string) => {
+        const response = await api.delete(`/admin/users/${id}`);
+        return response.data;
     }
 };
+
+export default userService;

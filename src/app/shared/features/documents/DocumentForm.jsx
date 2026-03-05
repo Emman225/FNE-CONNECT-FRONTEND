@@ -27,7 +27,7 @@ const DocumentForm = ({ type = 'invoice', isPublic = false }) => {
         pdv: 'SIEGE' // Point de Vente
     });
 
-    const [serviceType, setServiceType] = useState('Prestation de service');
+    const [serviceType, setServiceType] = useState('vente_article');
     const [contractFile, setContractFile] = useState(null);
     const [items, setItems] = useState([{
         id: 1,
@@ -171,7 +171,7 @@ const DocumentForm = ({ type = 'invoice', isPublic = false }) => {
 
                     {/* Header Facture */}
                     <Card style={{ padding: '1.5rem', borderLeft: '4px solid var(--primary)' }}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1.5rem' }}>
                             <Input
                                 label="N° Pièce (ID FNE)"
                                 value={docInfo.reference}
@@ -184,6 +184,13 @@ const DocumentForm = ({ type = 'invoice', isPublic = false }) => {
                                     <option value="Espèces">Espèces</option>
                                     <option value="Chèque">Chèque</option>
                                     <option value="Mobile Money">Mobile Money</option>
+                                </select>
+                            </div>
+                            <div className="flex flex-col gap-1">
+                                <label style={{ fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem' }}>Type de vente</label>
+                                <select className="input-field" value={serviceType} onChange={(e) => setServiceType(e.target.value)} style={{ backgroundColor: 'white' }}>
+                                    <option value="vente_article">Vente d'articles</option>
+                                    <option value="prestation_services">Prestation de services</option>
                                 </select>
                             </div>
                         </div>

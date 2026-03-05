@@ -1,39 +1,55 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Card from '../../../components/ui/Card';
 import Button from '../../../components/ui/Button';
 import DocumentTable from '../../../app/shared/features/documents/DocumentTable';
 import PaymentModal from '../../../app/shared/features/payments/PaymentModal';
 import FneInvoiceModal from '../../../app/shared/features/invoices/FneInvoiceModal';
 import FneUploadModal from '../../../app/shared/features/invoices/FneUploadModal';
-import { Plus, Filter, Download } from 'lucide-react';
+import { Plus, Filter, Download, Loader2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDashboardPath } from '../../../hooks/useDashboardPath';
 import { useNotifications } from '../../../context/NotificationContext';
-
+import { invoiceService } from '../../../services/invoiceService';
+import toast from 'react-hot-toast';
 import showAlert from '../../../utils/sweetAlert';
-
-const INITIAL_MOCK_INVOICES = [
-    { id: 1, accountNumber: 'FNE-25897001', number: 'FAC-2023-001', clientName: 'Jean Doe', clientPhone: '0708091011', date: '2023-12-01', amount: 150000, status: 'fne_generated', isComplete: true },
-    { id: 2, accountNumber: 'FNE-25897002', number: 'FAC-2023-002', clientName: 'Entreprise ABC', clientPhone: '0102030405', date: '2023-12-05', amount: 2500000, status: 'pending', isComplete: true },
-    { id: 3, accountNumber: 'FNE-25897003', number: 'FAC-2023-003', clientName: 'Marc Konan', clientPhone: '0505050505', date: '2023-12-10', amount: 75000, status: 'draft', isComplete: true },
-    { id: 4, accountNumber: 'FNE-25897004', number: 'FAC-2023-004', clientName: 'Sarl Ivoire', clientPhone: '0707070707', date: '2023-12-12', amount: 450000, status: 'verifying', isComplete: true },
-    { id: 5, accountNumber: 'FNE-25897005', number: 'FAC-2023-005', clientName: 'Boutique Luxe', clientPhone: '0102030405', date: '2023-12-15', amount: 125000, status: 'verifying', isComplete: true },
-];
 
 const InvoiceListPage = () => {
     const { basePath, isAdminArea } = useDashboardPath();
     const navigate = useNavigate();
-    const { showSuccess } = useNotifications();
-    const [invoices, setInvoices] = useState(INITIAL_MOCK_INVOICES);
+    const { showSuccess, showError } = useNotifications();
+    const [invoices, setInvoices] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [filterStatus, setFilterStatus] = useState('all');
     const [selectedInvoice, setSelectedInvoice] = useState(null);
     const [isPaymentOpen, setIsPaymentOpen] = useState(false);
     const [isFneModalOpen, setIsFneModalOpen] = useState(false);
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
-    const filteredInvoices = filterStatus === 'all'
-        ? invoices
-        : invoices.filter(inv => inv.status === filterStatus);
+    const fetchInvoices = useCallback(async () => {
+        setLoading(true);
+        try {
+            const params = {
+                type: 'INVOICE'
+            };
+            // Mapper les statuts du frontend vers ceux du backend si nécessaire
+            // Dans notre backend : draft, sent, paid, cancelled
+            if (filterStatus !== 'all') {
+                params.status = filterStatus;
+            }
+
+            const data = await invoiceService.getAll(params);
+            setInvoices(data.data || []); // Laravel paginator returns data in 'data' field
+        } catch (error) {
+            console.error("Failed to fetch invoices", error);
+            showError("Erreur lors du chargement des factures");
+        } finally {
+            setLoading(false);
+        }
+    }, [filterStatus]);
+
+    useEffect(() => {
+        fetchInvoices();
+    }, [fetchInvoices]);
 
     const handlePay = (invoice) => {
         setSelectedInvoice(invoice);
@@ -62,8 +78,13 @@ const InvoiceListPage = () => {
         );
 
         if (result.isConfirmed) {
-            setInvoices(invoices.filter(inv => inv.id !== invoice.id));
-            showSuccess('Facture supprimée avec succès');
+            try {
+                await invoiceService.delete(invoice.id);
+                setInvoices(invoices.filter(inv => inv.id !== invoice.id));
+                showSuccess('Facture supprimée avec succès');
+            } catch (error) {
+                toast.error("Erreur lors de la suppression");
+            }
         }
     };
 
@@ -104,56 +125,61 @@ const InvoiceListPage = () => {
                     Brouillon
                 </button>
                 <button
-                    onClick={() => setFilterStatus('pending')}
+                    onClick={() => setFilterStatus('sent')}
                     className={`btn`}
                     style={{
                         borderRadius: '2rem',
                         padding: '0.5rem 1.25rem',
-                        backgroundColor: filterStatus === 'pending' ? 'var(--warning-light)' : 'white',
-                        color: filterStatus === 'pending' ? 'var(--warning)' : 'var(--text-muted)',
+                        backgroundColor: filterStatus === 'sent' ? 'var(--warning-light)' : 'white',
+                        color: filterStatus === 'sent' ? 'var(--warning)' : 'var(--text-muted)',
                         border: '1px solid var(--border-color)'
                     }}
                 >
-                    En attente
+                    En attente de paiement
                 </button>
                 <button
-                    onClick={() => setFilterStatus('verifying')}
+                    onClick={() => setFilterStatus('paid')}
                     className={`btn`}
                     style={{
                         borderRadius: '2rem',
                         padding: '0.5rem 1.25rem',
-                        backgroundColor: filterStatus === 'verifying' ? 'var(--primary-lighter)' : 'white',
-                        color: filterStatus === 'verifying' ? 'var(--primary)' : 'var(--text-muted)',
+                        backgroundColor: filterStatus === 'paid' ? 'var(--success-light)' : 'white',
+                        color: filterStatus === 'paid' ? 'var(--success)' : 'var(--text-muted)',
                         border: '1px solid var(--border-color)'
                     }}
                 >
-                    FNE Envoyées
+                    Payées
                 </button>
                 <button
-                    onClick={() => setFilterStatus('fne_generated')}
+                    onClick={() => setFilterStatus('cancelled')}
                     className={`btn`}
                     style={{
                         borderRadius: '2rem',
                         padding: '0.5rem 1.25rem',
-                        backgroundColor: filterStatus === 'fne_generated' ? 'var(--success-light)' : 'white',
-                        color: filterStatus === 'fne_generated' ? 'var(--success)' : 'var(--text-muted)',
+                        backgroundColor: filterStatus === 'cancelled' ? '#FEE2E2' : 'white',
+                        color: filterStatus === 'cancelled' ? '#DC2626' : 'var(--text-muted)',
                         border: '1px solid var(--border-color)'
                     }}
                 >
-                    {isAdminArea ? 'FNE Transmise' : 'FNE Reçu'}
+                    Annulées
                 </button>
             </div>
 
-
-            <DocumentTable
-                documents={filteredInvoices}
-                type="invoice"
-                onPay={handlePay}
-                onGenerateFne={handleGenerateFne}
-                onUploadFne={handleUploadFne}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
-            />
+            {loading ? (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '40vh' }}>
+                    <Loader2 className="animate-spin" size={48} color="var(--primary)" />
+                </div>
+            ) : (
+                <DocumentTable
+                    documents={invoices}
+                    type="invoice"
+                    onPay={handlePay}
+                    onGenerateFne={handleGenerateFne}
+                    onUploadFne={handleUploadFne}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                />
+            )}
 
             <PaymentModal
                 isOpen={isPaymentOpen}

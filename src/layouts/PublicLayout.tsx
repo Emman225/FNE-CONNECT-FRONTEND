@@ -7,7 +7,7 @@ const PublicLayout = () => {
     return (
         <div style={{ display: 'flex', minHeight: '100vh', backgroundColor: 'var(--bg-main)' }}>
             <Sidebar />
-            <div style={{ flex: 1, marginLeft: '280px', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ flex: 1, marginLeft: '280px', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                 <Topbar />
                 <main style={{ padding: '2rem', flex: 1, overflowX: 'hidden' }}>
                     <div className="container" style={{ maxWidth: '1400px', padding: 0 }}>

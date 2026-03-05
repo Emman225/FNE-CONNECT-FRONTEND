@@ -1,24 +1,51 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Card from '../../../components/ui/Card';
 import StatCard from '../../../app/shared/components/dashboard/StatCard';
 import ActivityTimeline from '../../../app/shared/components/dashboard/ActivityTimeline';
-import { TrendingUp, Users, FileText, Wallet, Plus, ArrowRight, DollarSign, CreditCard } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, AreaChart, Area } from 'recharts';
+import { TrendingUp, Users, FileText, Wallet, Plus, ArrowRight, DollarSign, CreditCard, Loader2 } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../../auth/AuthProvider';
-
-const vendorData = [
-    { name: 'Lun', sales: 120000 },
-    { name: 'Mar', sales: 150000 },
-    { name: 'Mer', sales: 80000 },
-    { name: 'Jeu', sales: 200000 },
-    { name: 'Ven', sales: 180000 },
-    { name: 'Sam', sales: 250000 },
-    { name: 'Dim', sales: 100000 },
-];
+import { vendorService } from '../../../services/vendorService';
+import toast from 'react-hot-toast';
 
 const VendorDashboardHome = () => {
     const { user } = useAuth();
+    const [loading, setLoading] = useState(true);
+    const [stats, setStats] = useState<any>(null);
+
+    useEffect(() => {
+        const fetchStats = async () => {
+            try {
+                const data = await vendorService.getDashboardStats();
+                setStats(data);
+            } catch (error) {
+                console.error("Erreur lors du chargement des stats", error);
+                toast.error("Impossible de charger les statistiques du tableau de bord");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchStats();
+    }, []);
+
+    const formatFCFA = (value: number) => {
+        return new Intl.NumberFormat('fr-FR').format(value) + ' FCFA';
+    };
+
+    if (loading) {
+        return (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
+                <Loader2 className="animate-spin" size={48} color="var(--primary)" />
+            </div>
+        );
+    }
+
+    const { kpis, chart_data } = stats || {
+        kpis: { balance: 0, total_sales: 0, commissions: 0, clients: 0, unpaid_invoices: 0 },
+        chart_data: []
+    };
 
     return (
         <div className="fade-in">
@@ -63,7 +90,7 @@ const VendorDashboardHome = () => {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
                 <StatCard
                     title="Solde Actuel"
-                    value="450,000 FCFA"
+                    value={formatFCFA(kpis.balance)}
                     trend="neutral"
                     trendValue="Disp."
                     icon={Wallet}
@@ -71,33 +98,33 @@ const VendorDashboardHome = () => {
                 />
                 <StatCard
                     title="Mes Ventes"
-                    value="1,080,000 FCFA"
+                    value={formatFCFA(kpis.total_sales)}
                     trend="up"
-                    trendValue="+15%"
+                    trendValue="Total"
                     icon={DollarSign}
                     color="success"
                 />
                 <StatCard
                     title="Commissions"
-                    value="108,000 FCFA"
+                    value={formatFCFA(kpis.commissions)}
                     trend="up"
-                    trendValue="+15%"
+                    trendValue="Total"
                     icon={CreditCard}
                     color="warning"
                 />
                 <StatCard
                     title="Clients"
-                    value="42"
+                    value={kpis.clients.toString()}
                     trend="up"
-                    trendValue="+3"
+                    trendValue="Actifs"
                     icon={Users}
                     color="primary"
                 />
                 <StatCard
                     title="Factures Impayées"
-                    value="3"
+                    value={kpis.unpaid_invoices.toString()}
                     trend="down"
-                    trendValue="-1"
+                    trendValue="Attente"
                     icon={FileText}
                     color="danger"
                 />
@@ -117,7 +144,7 @@ const VendorDashboardHome = () => {
 
                     <div style={{ height: '350px', width: '100%' }}>
                         <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={vendorData}>
+                            <BarChart data={chart_data}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.3} />
                                 <XAxis
                                     dataKey="name"
@@ -140,6 +167,7 @@ const VendorDashboardHome = () => {
                                         boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
                                         padding: '12px'
                                     }}
+                                    formatter={(value: any) => [formatFCFA(value), 'Ventes']}
                                 />
                                 <Bar
                                     dataKey="sales"

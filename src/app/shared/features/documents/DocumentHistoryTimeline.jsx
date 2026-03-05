@@ -13,8 +13,8 @@ const DocumentHistoryTimeline = ({ document }) => {
     timelineEvents.push({
         id: 1,
         type: 'created',
-        title: `${document.type === 'quote' ? 'Devis' : document.type === 'proforma' ? 'Proforma' : 'Facture'} créé(e)`,
-        description: `Document ${document.id} créé`,
+        title: `${document.documentType === 'QUOTE' ? 'Devis' : document.documentType === 'PROFORMA' ? 'Proforma' : 'Facture'} créé(e)`,
+        description: `Document ${document.invoiceNumber || document.id} créé`,
         date: document.createdAt,
         icon: FileText,
         color: 'var(--primary)'
@@ -34,12 +34,12 @@ const DocumentHistoryTimeline = ({ document }) => {
     }
 
     // Status change events
-    if (document.status === 'sent') {
+    if (document.status === 'sent' || document.status === 'SENT') {
         timelineEvents.push({
             id: 3,
             type: 'sent',
             title: 'Document envoyé',
-            description: `Envoyé au client ${document.client.name}`,
+            description: `Envoyé au client ${document.clientInfo?.clientName || 'Inconnu'}`,
             date: document.sentAt || document.createdAt,
             icon: CheckCircle,
             color: 'var(--info)'
@@ -59,7 +59,7 @@ const DocumentHistoryTimeline = ({ document }) => {
     }
 
     // Commission events (for invoices)
-    if (document.type === 'invoice' && document.commissionStatus) {
+    if (document.documentType === 'INVOICE' && document.commissionStatus) {
         if (document.commissionStatus === 'paid') {
             timelineEvents.push({
                 id: 5,
@@ -74,26 +74,26 @@ const DocumentHistoryTimeline = ({ document }) => {
     }
 
     // FNE generation (for invoices)
-    if (document.fneNumber) {
+    if (document.dgiUid || document.invoiceNumber?.startsWith('FNE')) {
         timelineEvents.push({
             id: 6,
             type: 'fne_generated',
             title: 'Facture FNE générée',
-            description: `Numéro FNE: ${document.fneNumber}`,
-            date: document.fneGeneratedAt,
+            description: `Numéro FNE: ${document.dgiUid || document.invoiceNumber}`,
+            date: document.certifiedAt || document.updatedAt,
             icon: CheckCircle,
             color: 'var(--success)'
         });
     }
 
     // Payment events
-    if (document.paymentStatus === 'paid') {
+    if (document.status === 'paid' || document.status === 'PAID') {
         timelineEvents.push({
             id: 7,
             type: 'paid',
             title: 'Facture payée',
-            description: `Paiement reçu de ${document.client.name}`,
-            date: document.paidAt,
+            description: `Paiement reçu de ${document.clientInfo?.clientName || 'Inconnu'}`,
+            date: document.paidAt || document.updatedAt,
             icon: CheckCircle,
             color: 'var(--success)'
         });

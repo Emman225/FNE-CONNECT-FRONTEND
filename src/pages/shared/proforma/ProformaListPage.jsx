@@ -6,27 +6,47 @@ import Button from '../../../components/ui/Button';
 import StatusBadge from '../../../app/shared/features/documents/StatusBadge';
 import DocumentTable from '../../../app/shared/features/documents/DocumentTable';
 import PaymentModal from '../../../app/shared/features/payments/PaymentModal';
-import { Plus, Filter, Download, FileText } from 'lucide-react';
-import { MOCK_PROFORMAS } from '../../../data/mockData';
+import { invoiceService } from '../../../services/invoiceService';
+import toast from 'react-hot-toast';
+import { Plus, Filter, Download, FileText, Loader2 } from 'lucide-react';
 import { formatCurrency } from '../../../utils/financialUtils';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { useNotifications } from '../../../context/NotificationContext';
-
 import showAlert from '../../../utils/sweetAlert';
 
 const ProformaListPage = () => {
     const { basePath } = useDashboardPath();
-    const { showSuccess } = useNotifications();
-    const [proformas, setProformas] = useState(MOCK_PROFORMAS);
+    const { showSuccess, showError } = useNotifications();
+    const [proformas, setProformas] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
     const [filterStatus, setFilterStatus] = useState('all');
     const [selectedProforma, setSelectedProforma] = useState(null);
     const [isPaymentOpen, setIsPaymentOpen] = useState(false);
     const navigate = useNavigate();
 
-    const filteredProformas = filterStatus === 'all'
-        ? proformas
-        : proformas.filter(p => p.status === filterStatus);
+    const fetchProformas = React.useCallback(async () => {
+        setLoading(true);
+        try {
+            const params = { type: 'PROFORMA' };
+            if (filterStatus !== 'all') {
+                params.status = filterStatus;
+            }
+            const response = await invoiceService.getAll(params);
+            setProformas(response.data || []);
+        } catch (error) {
+            console.error("Failed to fetch proformas", error);
+            showError("Erreur lors du chargement des proformas");
+        } finally {
+            setLoading(false);
+        }
+    }, [filterStatus]);
+
+    React.useEffect(() => {
+        fetchProformas();
+    }, [fetchProformas]);
+
+    const filteredProformas = proformas; // Already filtered via API if filterStatus changes
 
     const handlePay = (proforma) => {
         setSelectedProforma(proforma);
@@ -37,13 +57,18 @@ const ProformaListPage = () => {
         if (toType === 'invoice') {
             const result = await showAlert.confirm(
                 'Conversion en Facture',
-                `Voulez-vous convertir la proforma ${proforma.number} en Facture ?`,
+                `Voulez-vous convertir la proforma ${proforma.invoiceNumber || proforma.id} en Facture ?`,
                 'Convertir'
             );
 
             if (result.isConfirmed) {
-                showSuccess(`Proforma ${proforma.number} convertie en Facture avec succès !`);
-                navigate(`${basePath}/invoices`);
+                try {
+                    await invoiceService.convertToInvoice(proforma.id);
+                    showSuccess(`Proforma convertie en Facture avec succès !`);
+                    navigate(`${basePath}/invoices`);
+                } catch (error) {
+                    toast.error("Erreur lors de la conversion");
+                }
             }
         }
     };
@@ -60,8 +85,13 @@ const ProformaListPage = () => {
         );
 
         if (result.isConfirmed) {
-            setProformas(proformas.filter(p => p.id !== proforma.id));
-            showSuccess('Proforma supprimée avec succès');
+            try {
+                await invoiceService.delete(proforma.id);
+                setProformas(proformas.filter(p => p.id !== proforma.id));
+                showSuccess('Proforma supprimée avec succès');
+            } catch (error) {
+                toast.error("Erreur lors de la suppression");
+            }
         }
     };
 
@@ -200,7 +230,7 @@ const ProformaListPage = () => {
                                 Total Proformas
                             </p>
                             <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-main)' }}>
-                                {MOCK_PROFORMAS.length}
+                                {proformas.length}
                             </h3>
                         </div>
                     </div>

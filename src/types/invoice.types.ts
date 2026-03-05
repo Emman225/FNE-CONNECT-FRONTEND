@@ -3,6 +3,8 @@
  * (Devis, Proforma, Facture)
  */
 
+import { InvoicePaymentInfo } from './clientPayment.types';
+
 // ==================== ENUMS ====================
 
 export enum DocumentType {
@@ -24,6 +26,7 @@ export enum PaymentMethod {
   CHECK = 'CHECK',
   CREDIT_CARD = 'CREDIT_CARD',
   MOBILE_MONEY = 'MOBILE_MONEY',
+  BANK_BILL = 'BANK_BILL', // A terme
   OTHER = 'OTHER'
 }
 
@@ -40,13 +43,16 @@ export enum UnitOfMeasure {
   OTHER = 'OTHER'
 }
 
-export enum TaxRate {
-  RATE_0 = 0,
-  RATE_5 = 5,
-  RATE_10 = 10,
-  RATE_15 = 15,
-  RATE_18 = 18,
-  RATE_20 = 20
+export enum TaxRateCode {
+  TVA_18 = 'TVA_18',      // TVA normal - 18,00% (A)
+  TVA_9 = 'TVA_9',        // TVA réduite - 09,00% (B)
+  TVA_0_C = 'TVA_0_C',    // TVA exo.conv - 00,00% (C)
+  TVA_0_D = 'TVA_0_D',    // TVA exo.lég - 00,00% (D)
+  TVA_0_E = 'TVA_0_E',    // TVA exo export
+  TOB_5 = 'TOB_5',        // Taxe sur les Opérations Bancaires (5%)
+  TOB_10 = 'TOB_10',      // Taxe sur les Opérations Bancaires (10%)
+  TDT = 'TDT',            // Taxe pour le Développement Touristique
+  NONE = 'NONE'           // Pas de taxe
 }
 
 // ==================== INTERFACES ====================
@@ -55,6 +61,7 @@ export enum TaxRate {
  * Information client (affichage conditionnel selon BillingType)
  */
 export interface ClientInfo {
+  id?: string;
   // Commun à tous les types
   clientName: string;
   phone?: string;
@@ -81,7 +88,8 @@ export interface LineItem {
   unitOfMeasure: UnitOfMeasure;
   unitPriceHT: number; // Hors Taxe
   discountPercent: number;
-  taxRate: TaxRate;
+  taxCode: TaxRateCode;
+  additionalTaxes?: AdditionalTax[]; // Taxes supplémentaires par ligne
   totalHT: number; // Calculé automatiquement
 }
 
@@ -113,6 +121,18 @@ export interface TotalTax {
 }
 
 /**
+ * Commission FNE Connect
+ */
+export interface InvoiceCommission {
+  rate: number; // Taux de commission (ex: 0.025 pour 2.5%)
+  amount: number; // Montant calculé
+  status: 'unpaid' | 'paid' | 'refunded';
+  paidAt?: Date;
+  paymentMethod?: string;
+  transactionRef?: string;
+}
+
+/**
  * Totaux calculés
  */
 export interface InvoiceTotals {
@@ -123,18 +143,46 @@ export interface InvoiceTotals {
   totalAdditionalTaxes: number; // Montant des autres taxes
   totalTTCTaxes: number; // Montant des taxes sur TTC
   totalTTC: number; // Total Toutes Taxes Comprises
+  netAPayer: number; // TTC - Acompte
+  taxSummary: Array<{
+    code: TaxRateCode;
+    label: string;
+    baseHT: number;
+    rate: number;
+    amount: number;
+  }>;
 }
 
 /**
  * État complet du formulaire de facturation
  */
 export interface InvoiceFormData {
+  id?: string | number;
+  dgiUid?: string;
+  dgiQrCode?: string;
+  dgiSynced?: boolean;
+  fneOfficialPdfPath?: string;
+  issuer?: {
+    name: string;
+    ncc: string;
+    address: string;
+    phone: string;
+    email: string;
+    city?: string;
+    rccm?: string;
+    regime?: string;
+    center?: string;
+    bank?: string;
+    legalFooter?: string;
+  };
   // Section 1 : Type de document et facturation
   documentType: DocumentType;
   billingType: BillingType;
+  serviceType?: 'vente_article' | 'prestation_services';
   paymentMethod: PaymentMethod;
   hasRNE: boolean;
   rneNumber?: string;
+  dueDate?: string;
 
   // Section 2 : Informations client
   clientInfo: ClientInfo;
@@ -151,13 +199,37 @@ export interface InvoiceFormData {
   // Section 6 : Taxes sur le total TTC
   totalTaxes: TotalTax[];
 
+  // Section 7 : Documents joints
+  purchaseOrderFile?: string | File; // Bon de commande ou contrat
+  deliveryNoteFile?: string | File;  // Bon de livraison
+
+  // Acompte
+  acompte: number;
+
   // Totaux calculés
   totals: InvoiceTotals;
 
+  // Commission FNE Connect
+  commission?: InvoiceCommission;
+
+  // Informations de paiement client (paiements partiels)
+  paymentInfo?: InvoicePaymentInfo;
+
+  // Lien de paiement public
+  paymentLink?: {
+    token: string;
+    url: string;
+    expiresAt?: string;
+    isActive: boolean;
+  };
+
   // Métadonnées
+  invoiceNumber?: string;
+  accountNumber?: string;
+  isComplete?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
-  status?: 'draft' | 'submitted' | 'approved' | 'rejected';
+  status?: 'draft' | 'sent' | 'paid' | 'partially_paid' | 'cancelled' | 'overdue';
 }
 
 /**
@@ -222,6 +294,7 @@ export const PAYMENT_METHOD_LABELS: Record<PaymentMethod, string> = {
   [PaymentMethod.CHECK]: 'Chèque',
   [PaymentMethod.CREDIT_CARD]: 'Carte de crédit',
   [PaymentMethod.MOBILE_MONEY]: 'Mobile Money',
+  [PaymentMethod.BANK_BILL]: 'A terme',
   [PaymentMethod.OTHER]: 'Autre'
 };
 
@@ -238,13 +311,39 @@ export const UNIT_OF_MEASURE_LABELS: Record<UnitOfMeasure, string> = {
   [UnitOfMeasure.OTHER]: 'Autre'
 };
 
+export const TAX_RATE_VALUES: Record<TaxRateCode, number> = {
+  [TaxRateCode.TVA_18]: 18,
+  [TaxRateCode.TVA_9]: 9,
+  [TaxRateCode.TVA_0_C]: 0,
+  [TaxRateCode.TVA_0_D]: 0,
+  [TaxRateCode.TVA_0_E]: 0,
+  [TaxRateCode.TOB_5]: 5,
+  [TaxRateCode.TOB_10]: 10,
+  [TaxRateCode.TDT]: 2,
+  [TaxRateCode.NONE]: 0
+};
+
+export const TAX_RATE_LABELS: Record<TaxRateCode, string> = {
+  [TaxRateCode.TVA_18]: 'TVA normal - 18,00% (A)',
+  [TaxRateCode.TVA_9]: 'TVA réduite - 09,00% (B)',
+  [TaxRateCode.TVA_0_C]: 'TVA exo.conv - 00,00% (C)',
+  [TaxRateCode.TVA_0_D]: 'TVA exo.lég - 00,00% (D)',
+  [TaxRateCode.TVA_0_E]: 'TVA exo export',
+  [TaxRateCode.TOB_5]: 'Taxe sur Op. Bancaires (5%)',
+  [TaxRateCode.TOB_10]: 'Taxe sur Op. Bancaires (10%)',
+  [TaxRateCode.TDT]: 'Taxe Dév. Touristique',
+  [TaxRateCode.NONE]: 'Sans taxe'
+};
+
 export const TAX_RATE_OPTIONS: SelectOption[] = [
-  { value: 0, label: '0%' },
-  { value: 5, label: '5%' },
-  { value: 10, label: '10%' },
-  { value: 15, label: '15%' },
-  { value: 18, label: '18%' },
-  { value: 20, label: '20%' }
+  { value: TaxRateCode.TVA_18, label: 'TVA normal - 18,00% (A)' },
+  { value: TaxRateCode.TVA_9, label: 'TVA réduite - 09,00% (B)' },
+  { value: TaxRateCode.TVA_0_C, label: 'TVA exo.conv - 00,00% (C)' },
+  { value: TaxRateCode.TVA_0_D, label: 'TVA exo.lég - 00,00% (D)' },
+  { value: TaxRateCode.TVA_0_E, label: 'TVA exo export' },
+  { value: TaxRateCode.TOB_5, label: 'Taxe sur Op. Bancaires (5%)' },
+  { value: TaxRateCode.TOB_10, label: 'Taxe sur Op. Bancaires (10%)' },
+  { value: TaxRateCode.TDT, label: 'Taxe Dév. Touristique' }
 ];
 
 export const CURRENCY_OPTIONS: SelectOption[] = [

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 import { UserRole } from '../types/roles';
-import { findUserByCredentials } from '../data/mockUsers';
+import { authService } from '../services/authService';
 
 export interface User {
     id: string;
@@ -12,11 +12,12 @@ export interface User {
     date_creation?: string;
     date_derniere_connexion?: string;
     avatar?: string;
+    token?: string; // Token JWT
 }
 
 interface AuthContextType {
     user: User | null;
-    login: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: User }>;
+    login: (phoneOrEmail: string, password: string) => Promise<{ success: boolean; error?: string; user?: User }>;
     logout: () => void;
     hasRole: (role: UserRole) => boolean;
     hasAnyRole: (roles: UserRole[]) => boolean;
@@ -35,45 +36,93 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
     });
 
-    /**
-     * Login function
-     * Returns the authenticated user so the login component can handle navigation
-     */
-    const login = async (email: string, password: string): Promise<{ success: boolean; error?: string; user?: User }> => {
-        // Simulate authentication delay
-        await new Promise(resolve => setTimeout(resolve, 500));
+    // Inactivity logout (5 minutes)
+    const INACTIVITY_TIMEOUT = 5 * 60 * 1000; // 5 minutes in milliseconds
 
-        // Find user by credentials
-        const mockUser = findUserByCredentials(email, password);
+    React.useEffect(() => {
+        if (!user) return;
 
-        if (!mockUser) {
-            return {
-                success: false,
-                error: 'Email ou mot de passe incorrect'
-            };
-        }
+        let timeoutId: any;
 
-        // Create user object
-        const authenticatedUser: User = {
-            id: mockUser.id,
-            name: mockUser.name,
-            email: mockUser.email,
-            role: mockUser.role,
-            statut_compte: 'actif',
-            date_creation: new Date().toISOString(),
-            date_derniere_connexion: new Date().toISOString(),
-            avatar: mockUser.name.substring(0, 2).toUpperCase()
+        const resetTimer = () => {
+            if (timeoutId) clearTimeout(timeoutId);
+            timeoutId = setTimeout(() => {
+                console.log("Inactivity detected, logging out...");
+                logout();
+            }, INACTIVITY_TIMEOUT);
         };
 
-        setUser(authenticatedUser);
-        localStorage.setItem('fne_user', JSON.stringify(authenticatedUser));
+        // Events to track user activity
+        const activityEvents = [
+            'mousedown', 'mousemove', 'keydown',
+            'scroll', 'touchstart', 'click'
+        ];
 
-        return { success: true, user: authenticatedUser };
+        // Initialize timer
+        resetTimer();
+
+        // Add event listeners
+        activityEvents.forEach(event => {
+            window.addEventListener(event, resetTimer);
+        });
+
+        // Cleanup
+        return () => {
+            if (timeoutId) clearTimeout(timeoutId);
+            activityEvents.forEach(event => {
+                window.removeEventListener(event, resetTimer);
+            });
+        };
+    }, [user]);
+
+    /**
+     * Login function
+     * Uses real backend API
+     */
+    const login = async (phoneOrEmail: string, password: string): Promise<{ success: boolean; error?: string; user?: User }> => {
+        try {
+            const data = await authService.login({
+                phone: phoneOrEmail, // Le backend accepte phone ou email sur ce champ dans ma logique simplifiée
+                email: phoneOrEmail,
+                password
+            });
+
+            if (data.access_token) {
+                const authenticatedUser: User = {
+                    id: data.user.id,
+                    name: data.user.name,
+                    email: data.user.email,
+                    role: data.user.role as UserRole,
+                    statut_compte: data.user.status,
+                    date_creation: data.user.created_at,
+                    date_derniere_connexion: new Date().toISOString(),
+                    avatar: data.user.name.substring(0, 2).toUpperCase(),
+                    token: data.access_token
+                };
+
+                setUser(authenticatedUser);
+                localStorage.setItem('fne_user', JSON.stringify(authenticatedUser));
+                return { success: true, user: authenticatedUser };
+            }
+
+            return { success: false, error: 'Une erreur est survenue lors de la connexion' };
+        } catch (error: any) {
+            return {
+                success: false,
+                error: error.response?.data?.error || 'Email/Téléphone ou mot de passe incorrect'
+            };
+        }
     };
 
-    const logout = () => {
-        setUser(null);
-        localStorage.removeItem('fne_user');
+    const logout = async () => {
+        try {
+            await authService.logout();
+        } catch (e) {
+            console.error("Logout error", e);
+        } finally {
+            setUser(null);
+            localStorage.removeItem('fne_user');
+        }
     };
 
     const hasRole = (role: UserRole): boolean => {

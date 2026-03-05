@@ -1,7 +1,9 @@
 import React from 'react';
 import toast from 'react-hot-toast';
+import { vendorService } from '../../../../services/vendorService';
 
 const Step3Activite = ({ data, updateData, onNext, onBack }) => {
+    const [isLoading, setIsLoading] = React.useState(false);
 
     // Validation Logic
     const validate = () => {
@@ -20,10 +22,23 @@ const Step3Activite = ({ data, updateData, onNext, onBack }) => {
         return true;
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (validate()) {
+        if (!validate()) return;
+
+        setIsLoading(true);
+        try {
+            await vendorService.updateProfile({
+                activity_type: data.activityNature,
+                description: data.activityDescription,
+                activity_start_year: data.activityStartYear
+            });
             onNext();
+        } catch (error) {
+            console.error("Failed to update activity", error);
+            toast.error("Erreur lors de la mise à jour de l'activité");
+        } finally {
+            setIsLoading(false);
         }
     };
 

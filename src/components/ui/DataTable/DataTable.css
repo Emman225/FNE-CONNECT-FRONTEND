@@ -8,6 +8,8 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
+    width: 100%;
+    min-width: 0;
 }
 
 .datatable-header {
@@ -55,12 +57,35 @@
 
 .datatable-container {
     overflow-x: auto;
+    overflow-y: hidden;
     position: relative;
-    height: 100%;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Premium Scrollbar */
+.datatable-container::-webkit-scrollbar {
+    height: 6px;
+}
+
+.datatable-container::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+
+.datatable-container::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 10px;
+    transition: all 0.2s;
+}
+
+.datatable-container::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
 }
 
 .datatable {
     width: 100%;
+    min-width: 100%;
     border-collapse: separate;
     border-spacing: 0;
 }

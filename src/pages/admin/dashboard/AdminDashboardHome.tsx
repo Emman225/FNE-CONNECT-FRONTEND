@@ -1,23 +1,44 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Card from '../../../components/ui/Card';
 import StatCard from '../../../app/shared/components/dashboard/StatCard';
-import { Users, ShieldAlert, Activity, Building, UserPlus, FileCheck, Settings } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LineChart, Line } from 'recharts';
+import { Users, ShieldAlert, Activity, Building, UserPlus, FileCheck, Settings, Wallet, FileText, TrendingUp, Clock } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, LineChart, Line, AreaChart, Area } from 'recharts';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../../auth/AuthProvider';
-
-const platformActivityData = [
-    { name: 'Lun', vendors: 4, transactions: 240 },
-    { name: 'Mar', vendors: 3, transactions: 139 },
-    { name: 'Mer', vendors: 7, transactions: 980 },
-    { name: 'Jeu', vendors: 2, transactions: 390 },
-    { name: 'Ven', vendors: 6, transactions: 480 },
-    { name: 'Sam', vendors: 1, transactions: 380 },
-    { name: 'Dim', vendors: 0, transactions: 430 },
-];
+import { adminService } from '../../../services/adminService';
 
 const AdminDashboardHome = () => {
     const { user } = useAuth();
+    const [stats, setStats] = useState<any>(null);
+    const [loading, setLoading] = useState(true);
+
+    const fetchStats = async () => {
+        try {
+            const data = await adminService.getDashboardStats();
+            setStats(data);
+        } catch (error) {
+            console.error("Failed to fetch admin stats:", error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchStats();
+    }, []);
+
+    const formatCurrency = (value: number) => {
+        return new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'XOF', minimumFractionDigits: 0 }).format(value);
+    };
+
+    if (loading) {
+        return (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '60vh', flexDirection: 'column', gap: '1rem' }}>
+                <div className="spinner"></div>
+                <p style={{ color: 'var(--text-secondary)' }}>Chargement des données du dashboard...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="fade-in">
@@ -34,42 +55,42 @@ const AdminDashboardHome = () => {
                     Administration Globale
                 </h1>
                 <p style={{ opacity: 0.9, fontSize: '1.1rem' }}>
-                    Vue d'ensemble de la plateforme FNE Connect.
+                    Vue d'ensemble de la plateforme FNE Connect. Bienvenue, {user?.name}.
                 </p>
             </div>
 
             {/* Admin Specific KPIs */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1.5rem', marginBottom: '2.5rem' }}>
                 <StatCard
-                    title="Vendeurs Actifs"
-                    value="124"
+                    title="Volume Transigé"
+                    value={formatCurrency(stats?.total_revenue_collected || 0)}
                     trend="up"
-                    trendValue="+12"
-                    icon={Building}
-                    color="primary"
-                />
-                <StatCard
-                    title="Volume Global"
-                    value="45.2M CFA"
-                    trend="up"
-                    trendValue="+8.4%"
+                    trendValue="+12%"
                     icon={Activity}
                     color="success"
                 />
                 <StatCard
-                    title="Alertes Conformité"
-                    value="5"
-                    trend="down"
-                    trendValue="-2"
+                    title="Vendeurs Actifs"
+                    value={stats?.total_vendors || 0}
+                    trend="up"
+                    trendValue="+5"
+                    icon={Building}
+                    color="primary"
+                />
+                <StatCard
+                    title="KYC en attente"
+                    value={stats?.pending_kyc || 0}
+                    trend={stats?.pending_kyc > 0 ? "down" : "up"}
+                    trendValue={stats?.pending_kyc > 0 ? "Actions requises" : "À jour"}
                     icon={ShieldAlert}
                     color="danger"
                 />
                 <StatCard
-                    title="Utilisateurs Total"
-                    value="450"
+                    title="Total Commissions"
+                    value={formatCurrency(stats?.total_commissions || 0)}
                     trend="up"
-                    trendValue="+24"
-                    icon={Users}
+                    trendValue="+8%"
+                    icon={TrendingUp}
                     color="secondary"
                 />
             </div>
@@ -80,15 +101,22 @@ const AdminDashboardHome = () => {
                     <div className="flex-between" style={{ marginBottom: '2rem' }}>
                         <div>
                             <h3 style={{ fontSize: '1.25rem', fontWeight: '700', color: 'var(--text-main)', marginBottom: '0.25rem' }}>
-                                Activité de la Plateforme
+                                Recettes de la Plateforme
                             </h3>
-                            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Transactions et Nouveaux Vendeurs</p>
+                            <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Volume des transactions (7 derniers jours)</p>
                         </div>
                     </div>
 
-                    <div style={{ height: '350px', width: '100%', minHeight: 0, minWidth: 0 }}>
-                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
-                            <LineChart data={platformActivityData}>
+                    <div style={{ height: '350px', width: '100%', minHeight: '350px' }}>
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={stats?.chart_data || []}>
+                                <defs>
+                                    <linearGradient id="colorCa" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3} />
+                                        <stop offset="50%" stopColor="var(--primary)" stopOpacity={0.15} />
+                                        <stop offset="95%" stopColor="var(--primary)" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border-color)" opacity={0.3} />
                                 <XAxis
                                     dataKey="name"
@@ -98,48 +126,30 @@ const AdminDashboardHome = () => {
                                     dy={10}
                                 />
                                 <YAxis
-                                    yAxisId="left"
                                     axisLine={false}
                                     tickLine={false}
                                     tick={{ fill: '#64748B', fontSize: 13, fontWeight: 500 }}
                                     dx={-10}
                                 />
-                                <YAxis
-                                    yAxisId="right"
-                                    orientation="right"
-                                    axisLine={false}
-                                    tickLine={false}
-                                    tick={{ fill: '#64748B', fontSize: 13, fontWeight: 500 }}
-                                    dx={10}
-                                />
                                 <Tooltip
-                                    cursor={{ stroke: 'var(--primary)', strokeWidth: 2 }}
+                                    cursor={{ stroke: 'var(--primary)', strokeWidth: 2, opacity: 0.3 }}
                                     contentStyle={{
                                         borderRadius: '12px',
                                         border: 'none',
-                                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                                        boxShadow: 'var(--shadow-lg)',
                                         padding: '12px'
                                     }}
                                 />
-                                <Line
-                                    yAxisId="left"
+                                <Area
                                     type="monotone"
-                                    dataKey="transactions"
+                                    dataKey="ca"
                                     stroke="var(--primary)"
                                     strokeWidth={3}
-                                    dot={{ r: 4, fill: 'var(--primary)', strokeWidth: 2, stroke: '#fff' }}
-                                    name="Transactions"
+                                    fillOpacity={1}
+                                    fill="url(#colorCa)"
+                                    animationDuration={1500}
                                 />
-                                <Line
-                                    yAxisId="right"
-                                    type="monotone"
-                                    dataKey="vendors"
-                                    stroke="var(--secondary)"
-                                    strokeWidth={3}
-                                    dot={{ r: 4, fill: 'var(--secondary)', strokeWidth: 2, stroke: '#fff' }}
-                                    name="Nouveaux Vendeurs"
-                                />
-                            </LineChart>
+                            </AreaChart>
                         </ResponsiveContainer>
                     </div>
                 </Card>
@@ -154,14 +164,22 @@ const AdminDashboardHome = () => {
                             <button className="btn btn-light" style={{ width: '100%', justifyContent: 'flex-start', padding: '1rem' }}>
                                 <UserPlus size={20} style={{ marginRight: '1rem', color: 'var(--primary)' }} />
                                 Valider Nouveaux Vendeurs
-                                <span style={{ marginLeft: 'auto', background: 'var(--primary)', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: '0.75rem' }}>3</span>
+                                {stats?.pending_kyc > 0 && (
+                                    <span style={{ marginLeft: 'auto', background: 'var(--primary)', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: '0.75rem' }}>
+                                        {stats.pending_kyc}
+                                    </span>
+                                )}
                             </button>
                         </Link>
                         <Link to="/admin/dashboard/compliance/aml">
                             <button className="btn btn-light" style={{ width: '100%', justifyContent: 'flex-start', padding: '1rem' }}>
                                 <ShieldAlert size={20} style={{ marginRight: '1rem', color: 'var(--danger)' }} />
                                 Alertes AML Critiques
-                                <span style={{ marginLeft: 'auto', background: 'var(--danger)', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: '0.75rem' }}>5</span>
+                                {stats?.active_aml_alerts > 0 && (
+                                    <span style={{ marginLeft: 'auto', background: 'var(--danger)', color: 'white', padding: '2px 8px', borderRadius: '10px', fontSize: '0.75rem' }}>
+                                        {stats.active_aml_alerts}
+                                    </span>
+                                )}
                             </button>
                         </Link>
                         <Link to="/admin/dashboard/reports">

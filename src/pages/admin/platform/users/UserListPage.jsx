@@ -1,10 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Search, Plus, MoreVertical, Edit2, Trash2, Filter, Shield, User, Download, Lock } from 'lucide-react';
 import { useNotifications } from '../../../../context/NotificationContext';
 
 import { userRoles, roleLabels } from '../../../../types/roles';
-import { mockUsers as MOCK_USERS } from '../../../../data/mockUsers';
+import { userService } from '../../../../services/userService';
 import AddUserModal from './AddUserModal';
 import DataTable from '../../../../components/ui/DataTable/DataTable';
 import showAlert from '../../../../utils/sweetAlert';
@@ -23,14 +23,30 @@ const getRoleBadgeStyle = (role) => {
 
 const UserListPage = () => {
     const navigate = useNavigate();
-    const { showSuccess } = useNotifications();
+    const { showSuccess, showError } = useNotifications();
     const [searchTerm, setSearchTerm] = useState('');
     const [roleFilter, setRoleFilter] = useState('all');
     const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
+    const [users, setUsers] = useState([]);
+    const [loading, setLoading] = useState(true);
 
-    // In a real app, this would be fetched from API
-    const [users, setUsers] = useState(MOCK_USERS);
+    const fetchUsers = async () => {
+        setLoading(true);
+        try {
+            const data = await userService.getAll();
+            setUsers(data);
+        } catch (error) {
+            console.error("Failed to fetch users:", error);
+            showError("Erreur lors de la récupération des utilisateurs");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchUsers();
+    }, []);
 
     const handleDelete = async (id) => {
         const result = await showAlert.confirm(
@@ -40,26 +56,30 @@ const UserListPage = () => {
         );
 
         if (result.isConfirmed) {
-            setUsers(users.filter(u => u.id !== id));
-            showSuccess('Utilisateur supprimé avec succès');
+            try {
+                await userService.delete(id);
+                showSuccess('Utilisateur supprimé avec succès');
+                fetchUsers();
+            } catch (error) {
+                showError("Erreur lors de la suppression");
+            }
         }
     };
 
-    const handleSaveUser = (userData) => {
-        if (userData.id) {
-            // Update
-            setUsers(users.map(u => u.id === userData.id ? userData : u));
-        } else {
-            // Create
-            const newUser = {
-                ...userData,
-                id: 'u-' + Math.random().toString(36).substr(2, 9),
-                accountNumber: 'FNE-' + Math.floor(10000000 + Math.random() * 90000000).toString(),
-                date_creation: new Date().toISOString()
-            };
-            setUsers([...users, newUser]);
+    const handleSaveUser = async (userData) => {
+        try {
+            if (userData.id) {
+                await userService.update(userData.id, userData);
+                showSuccess('Utilisateur mis à jour avec succès');
+            } else {
+                await userService.create(userData);
+                showSuccess('Utilisateur créé avec succès');
+            }
+            fetchUsers();
+            setIsAddUserModalOpen(false);
+        } catch (error) {
+            showError("Erreur lors de l'enregistrement de l'utilisateur");
         }
-        setIsAddUserModalOpen(false);
     };
 
     const handleOpenAddModal = () => {
@@ -82,12 +102,12 @@ const UserListPage = () => {
 
     const columns = [
         {
-            key: 'accountNumber',
-            label: 'N° Compte',
+            key: 'id',
+            label: 'ID',
             sortable: true,
             render: (row) => (
-                <span style={{ fontFamily: 'monospace', fontWeight: 'bold', color: 'var(--primary)' }}>
-                    {row.accountNumber || '-'}
+                <span style={{ fontFamily: 'monospace', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                    {row.id.substring(0, 8)}...
                 </span>
             )
         },
@@ -109,12 +129,12 @@ const UserListPage = () => {
                         fontSize: '0.875rem',
                         fontWeight: '600'
                     }}>
-                        {row.avatar?.charAt(0) || row.name?.charAt(0) || 'U'}
+                        {row.name?.charAt(0) || 'U'}
                     </div>
                     <div>
                         <p style={{ fontWeight: '500', color: 'var(--text-main)', margin: 0 }}>{row.name}</p>
                         <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', margin: 0 }}>
-                            Créé le {row.date_creation ? new Date(row.date_creation).toLocaleDateString() : '-'}
+                            Créé le {row.created_at ? new Date(row.created_at).toLocaleDateString() : '-'}
                         </p>
                     </div>
                 </div>
@@ -138,8 +158,8 @@ const UserListPage = () => {
                         alignItems: 'center',
                         gap: '0.25rem'
                     }}>
-                        {row.role === userRoles.ADMIN && <Shield size={12} />}
-                        {roleLabels[row.role]}
+                        {row.role === 'admin' && <Shield size={12} />}
+                        {row.role}
                     </span>
                 );
             }
@@ -155,19 +175,19 @@ const UserListPage = () => {
             )
         },
         {
-            key: 'statut_compte',
+            key: 'status',
             label: 'Statut',
             sortable: true,
             render: (row) => (
                 <span style={{
                     padding: '0.25rem 0.75rem',
                     borderRadius: '9999px',
-                    backgroundColor: row.statut_compte === 'actif' ? 'rgba(57, 180, 154, 0.1)' : 'rgba(239, 68, 68, 0.1)',
-                    color: row.statut_compte === 'actif' ? '#059669' : '#ef4444',
+                    backgroundColor: row.status === 'active' ? 'rgba(57, 180, 154, 0.1)' : 'rgba(239, 68, 68, 0.1)',
+                    color: row.status === 'active' ? '#059669' : '#ef4444',
                     fontSize: '0.75rem',
                     fontWeight: '600'
                 }}>
-                    {row.statut_compte === 'actif' ? 'Actif' : 'Suspendu'}
+                    {row.status === 'active' ? 'Actif' : 'Suspendu'}
                 </span>
             )
         }
@@ -209,37 +229,44 @@ const UserListPage = () => {
                 </button>
             </div>
 
-            <DataTable
-                columns={columns}
-                data={roleFilteredUsers}
-                actions={actions}
-                searchPlaceholder="Rechercher par nom, email ou téléphone..."
-                selectable
-                renderToolbar={
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <Filter size={16} color="var(--text-secondary)" />
-                        <select
-                            value={roleFilter}
-                            onChange={(e) => setRoleFilter(e.target.value)}
-                            style={{
-                                padding: '0.5rem',
-                                borderRadius: 'var(--radius-md)',
-                                border: '1px solid var(--border-color)',
-                                fontSize: '0.875rem',
-                                backgroundColor: 'white',
-                                minWidth: '150px'
-                            }}
-                        >
-                            <option value="all">Tous les rôles</option>
-                            {Object.values(userRoles)
-                                .filter(role => role !== userRoles.VENDOR)
-                                .map(role => (
-                                    <option key={role} value={role}>{roleLabels[role]}</option>
-                                ))}
-                        </select>
-                    </div>
-                }
-            />
+            {loading ? (
+                <div style={{ padding: '3rem', textAlign: 'center' }}>
+                    <div className="spinner" style={{ margin: '0 auto 1rem' }}></div>
+                    <p style={{ color: 'var(--text-secondary)' }}>Chargement des utilisateurs...</p>
+                </div>
+            ) : (
+                <DataTable
+                    columns={columns}
+                    data={roleFilteredUsers}
+                    actions={actions}
+                    searchPlaceholder="Rechercher par nom, email ou téléphone..."
+                    selectable
+                    renderToolbar={
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <Filter size={16} color="var(--text-secondary)" />
+                            <select
+                                value={roleFilter}
+                                onChange={(e) => setRoleFilter(e.target.value)}
+                                style={{
+                                    padding: '0.5rem',
+                                    borderRadius: 'var(--radius-md)',
+                                    border: '1px solid var(--border-color)',
+                                    fontSize: '0.875rem',
+                                    backgroundColor: 'white',
+                                    minWidth: '150px'
+                                }}
+                            >
+                                <option value="all">Tous les rôles</option>
+                                <option value="admin">Administrateur</option>
+                                <option value="finance">Finance</option>
+                                <option value="compliance">Conformité</option>
+                                <option value="support">Support</option>
+                                <option value="auditor">Auditeur</option>
+                            </select>
+                        </div>
+                    }
+                />
+            )}
             <AddUserModal
                 isOpen={isAddUserModalOpen}
                 onClose={() => setIsAddUserModalOpen(false)}

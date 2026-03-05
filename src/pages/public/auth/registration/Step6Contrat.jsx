@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
+import { vendorService } from '../../../../services/vendorService';
+import toast from 'react-hot-toast';
 
 const Step6Contrat = ({ data, updateData, onNext, onBack }) => {
+    const [isLoading, setIsLoading] = React.useState(false);
     const [agreements, setAgreements] = useState({
-        cgu: false,
-        confidentialite: false,
-        contratFiscal: false
+        cgu: data.agreements?.cgu || false,
+        confidentialite: data.agreements?.confidentialite || false,
+        contratFiscal: data.agreements?.contratFiscal || false
     });
 
     const handleAgreementChange = (field, value) => {
@@ -15,10 +18,23 @@ const Step6Contrat = ({ data, updateData, onNext, onBack }) => {
 
     const allAgreed = agreements.cgu && agreements.confidentialite && agreements.contratFiscal;
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (allAgreed) {
+        if (!allAgreed) return;
+
+        setIsLoading(true);
+        try {
+            await vendorService.updateProfile({
+                agreed_to_cgu: agreements.cgu,
+                agreed_to_privacy: agreements.confidentialite,
+                agreed_to_fiscal_contract: agreements.contratFiscal
+            });
             onNext();
+        } catch (error) {
+            console.error("Failed to update agreements", error);
+            toast.error("Erreur lors de la mise à jour des contrats");
+        } finally {
+            setIsLoading(false);
         }
     };
 

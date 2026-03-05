@@ -1,29 +1,126 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import Card from '../../../components/ui/Card';
 import Button from '../../../components/ui/Button';
 import StatusBadge from '../../../app/shared/features/documents/StatusBadge';
-import CommissionPaymentModal from '../../../app/shared/features/payments/CommissionPaymentModal';
-import { Wallet, Filter, Download, AlertCircle } from 'lucide-react';
-import { MOCK_COMMISSIONS, MOCK_INVOICES } from '../../../data/mockData';
+import { Wallet, Filter, Download, Info } from 'lucide-react';
 import { formatCurrency } from '../../../utils/financialUtils';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
-const CommissionListPage = () => {
-    const [commissions] = useState(MOCK_COMMISSIONS);
-    const [selectedCommission, setSelectedCommission] = useState(null);
-    const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
+import DataTable from '../../../components/ui/DataTable/DataTable';
+import { paymentService } from '../../../services/paymentService'; // Assuming paymentService handles API calls
 
-    const handlePayCommission = (commission) => {
-        setSelectedCommission(commission);
-        setIsPaymentModalOpen(true);
+const CommissionListPage = () => {
+    const [commissions, setCommissions] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchCommissions = async () => {
+            setLoading(true);
+            try {
+                // Fetch payments that are likely commissions (e.g., outgoing payments to FNE)
+                // You might need to adjust the filter params based on your backend API
+                const response = await paymentService.getAll({ type: 'commission' });
+
+                // Map API response to component structure
+                const mappedData = (response.data || []).map(item => ({
+                    id: item.reference || `COM-${item.id}`,
+                    invoiceNumber: item.related_invoice_number || '-',
+                    accountNumber: item.account_number || 'N/A',
+                    createdAt: item.created_at,
+                    paidAt: item.created_at, // Assuming created_at is payment date for now
+                    amount: item.amount,
+                    rate: item.rate || 0.03, // Default or fetch from API
+                    vendorBalance: item.balance_after,
+                    status: item.status || 'completed'
+                }));
+
+                setCommissions(mappedData);
+            } catch (error) {
+                console.error("Failed to fetch commissions", error);
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        fetchCommissions();
+    }, []);
+
+    const columns = [
+        {
+            key: 'id',
+            label: 'Référence',
+            sortable: true,
+            width: '140px',
+            render: (row) => <span style={{ fontWeight: '600', color: 'var(--primary)' }}>{row.id}</span>
+        },
+        {
+            key: 'invoiceNumber',
+            label: 'Facture',
+            sortable: true,
+            width: '140px',
+            render: (row) => <span style={{ fontWeight: '500' }}>{row.invoiceNumber}</span>
+        },
+        {
+            key: 'accountNumber',
+            label: 'N° Compte',
+            sortable: true,
+            width: '140px',
+            render: (row) => <span style={{ fontWeight: '500', color: 'var(--text-secondary)' }}>{row.accountNumber || 'N/A'}</span>
+        },
+        {
+            key: 'createdAt',
+            label: 'Date',
+            sortable: true,
+            width: '120px',
+            render: (row) => row.createdAt ? format(new Date(row.createdAt), 'dd MMM yyyy', { locale: fr }) : '-'
+        },
+        {
+            key: 'rate',
+            label: 'Taux',
+            align: 'right',
+            width: '100px',
+            render: (row) => `${(row.rate * 100).toFixed(1)}%`
+        },
+        {
+            key: 'amount',
+            label: 'Montant',
+            align: 'right',
+            sortable: true,
+            width: '140px',
+            render: (row) => <span style={{ fontWeight: '600' }}>{formatCurrency(row.amount)}</span>
+        },
+        {
+            key: 'vendorBalance',
+            label: 'Solde Vendeur',
+            sortable: true,
+            width: '150px',
+            render: (row) => (
+                <span style={{ fontWeight: '600', color: 'var(--primary)' }}>
+                    {row.vendorBalance ? formatCurrency(row.vendorBalance) : 'N/A'}
+                </span>
+            )
+        },
+        {
+            key: 'status',
+            label: 'Statut',
+            align: 'center',
+            sortable: true,
+            width: '140px',
+            render: (row) => <StatusBadge status={row.status} />
+        }
+    ];
+
+    const renderRowActions = (commission) => {
+        return (
+            <span style={{ fontSize: '0.875rem', color: 'var(--success)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                ✓ Payée le {commission.paidAt ? format(new Date(commission.paidAt), 'dd/MM/yyyy', { locale: fr }) : '-'}
+            </span>
+        );
     };
 
-    const pendingCommissions = commissions.filter(c => c.status === 'pending');
-    const paidCommissions = commissions.filter(c => c.status === 'paid');
-    const totalPending = pendingCommissions.reduce((sum, c) => sum + c.amount, 0);
-    const totalPaid = paidCommissions.reduce((sum, c) => sum + c.amount, 0);
+    const totalPaid = commissions.reduce((sum, c) => sum + Number(c.amount || 0), 0);
 
     return (
         <div>
@@ -50,29 +147,28 @@ const CommissionListPage = () => {
                 </div>
             </div>
 
-            {/* Alert for pending commissions */}
-            {pendingCommissions.length > 0 && (
-                <div style={{
-                    backgroundColor: '#FEF3C7',
-                    border: '1px solid #F59E0B',
-                    borderRadius: 'var(--radius-lg)',
-                    padding: '1rem 1.5rem',
-                    marginBottom: '2rem',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '1rem'
-                }}>
-                    <AlertCircle size={24} color="#D97706" />
-                    <div style={{ flex: 1 }}>
-                        <p style={{ fontWeight: '600', color: '#92400E', marginBottom: '0.25rem' }}>
-                            Vous avez {pendingCommissions.length} commission(s) en attente
-                        </p>
-                        <p style={{ fontSize: '0.875rem', color: '#78350F' }}>
-                            Payez vos commissions pour générer les factures FNE officielles
-                        </p>
-                    </div>
+            {/* Info banner */}
+            <div style={{
+                backgroundColor: '#EFF6FF',
+                border: '1px solid #3B82F6',
+                borderRadius: 'var(--radius-lg)',
+                padding: '1rem 1.5rem',
+                marginBottom: '2rem',
+                display: 'flex',
+                alignItems: 'start',
+                gap: '1rem'
+            }}>
+                <Info size={24} color="#3B82F6" style={{ flexShrink: 0, marginTop: '2px' }} />
+                <div style={{ flex: 1 }}>
+                    <p style={{ fontWeight: '600', color: '#1E40AF', marginBottom: '0.5rem' }}>
+                        Comment fonctionnent les commissions ?
+                    </p>
+                    <p style={{ fontSize: '0.875rem', color: '#1E3A8A', lineHeight: '1.6' }}>
+                        Les commissions sont automatiquement payées <strong>lors de la génération de chaque facture</strong>.
+                        Cette page affiche uniquement l'historique des commissions déjà payées pour assurer la transparence de vos transactions.
+                    </p>
                 </div>
-            )}
+            </div>
 
             {/* Stats Cards */}
             <div style={{
@@ -85,26 +181,6 @@ const CommissionListPage = () => {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                         <div style={{
                             padding: '0.75rem',
-                            backgroundColor: 'var(--warning-light)',
-                            borderRadius: 'var(--radius-lg)'
-                        }}>
-                            <Wallet size={24} color="var(--warning)" />
-                        </div>
-                        <div>
-                            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
-                                Commissions en Attente
-                            </p>
-                            <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--warning)' }}>
-                                {formatCurrency(totalPending)}
-                            </h3>
-                        </div>
-                    </div>
-                </Card>
-
-                <Card style={{ padding: '1.5rem' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                        <div style={{
-                            padding: '0.75rem',
                             backgroundColor: 'var(--success-light)',
                             borderRadius: 'var(--radius-lg)'
                         }}>
@@ -112,7 +188,7 @@ const CommissionListPage = () => {
                         </div>
                         <div>
                             <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
-                                Commissions Payées
+                                Total Commissions Payées
                             </p>
                             <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--success)' }}>
                                 {formatCurrency(totalPaid)}
@@ -132,10 +208,33 @@ const CommissionListPage = () => {
                         </div>
                         <div>
                             <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
-                                Total Commissions
+                                Nombre de Factures
                             </p>
                             <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: 'var(--text-main)' }}>
-                                {formatCurrency(totalPending + totalPaid)}
+                                {commissions.length}
+                            </h3>
+                        </div>
+                    </div>
+                </Card>
+
+                <Card style={{ padding: '1.5rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div style={{
+                            padding: '0.75rem',
+                            backgroundColor: '#F3E8FF',
+                            borderRadius: 'var(--radius-lg)'
+                        }}>
+                            <Wallet size={24} color="#9333EA" />
+                        </div>
+                        <div>
+                            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>
+                                Taux Moyen
+                            </p>
+                            <h3 style={{ fontSize: '1.5rem', fontWeight: '700', color: '#9333EA' }}>
+                                {commissions.length > 0
+                                    ? `${((commissions.reduce((sum, c) => sum + (c.rate || 0), 0) / commissions.length) * 100).toFixed(1)}%`
+                                    : '0%'
+                                }
                             </h3>
                         </div>
                     </div>
@@ -143,93 +242,23 @@ const CommissionListPage = () => {
             </div>
 
             {/* Commissions Table */}
-            <Card style={{ padding: '1.5rem' }}>
+            <Card style={{ padding: '1.5rem', overflow: 'hidden' }}>
                 <h3 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '1.5rem', color: 'var(--text-main)' }}>
                     Historique des Commissions
                 </h3>
 
-                <div style={{ overflowX: 'auto' }}>
-                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                        <thead>
-                            <tr style={{ borderBottom: '2px solid var(--border-color)' }}>
-                                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    Référence
-                                </th>
-                                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    Facture
-                                </th>
-                                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    Date
-                                </th>
-                                <th style={{ padding: '1rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    Taux
-                                </th>
-                                <th style={{ padding: '1rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    Montant
-                                </th>
-                                <th style={{ padding: '1rem', textAlign: 'center', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    Statut
-                                </th>
-                                <th style={{ padding: '1rem', textAlign: 'right', fontSize: '0.875rem', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                    Actions
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {commissions.map((commission) => (
-                                <tr key={commission.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
-                                    <td style={{ padding: '1rem' }}>
-                                        <span style={{ fontWeight: '600', color: 'var(--primary)' }}>
-                                            {commission.id}
-                                        </span>
-                                    </td>
-                                    <td style={{ padding: '1rem' }}>
-                                        <span style={{ fontWeight: '500' }}>
-                                            {commission.invoiceNumber}
-                                        </span>
-                                    </td>
-                                    <td style={{ padding: '1rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                                        {format(new Date(commission.createdAt), 'dd MMM yyyy', { locale: fr })}
-                                    </td>
-                                    <td style={{ padding: '1rem', textAlign: 'right', fontWeight: '500' }}>
-                                        {(commission.rate * 100).toFixed(1)}%
-                                    </td>
-                                    <td style={{ padding: '1rem', textAlign: 'right' }}>
-                                        <span style={{ fontWeight: '600', fontSize: '1rem' }}>
-                                            {formatCurrency(commission.amount)}
-                                        </span>
-                                    </td>
-                                    <td style={{ padding: '1rem', textAlign: 'center' }}>
-                                        <StatusBadge status={commission.status} />
-                                    </td>
-                                    <td style={{ padding: '1rem', textAlign: 'right' }}>
-                                        {commission.status === 'pending' ? (
-                                            <Button
-                                                size="sm"
-                                                onClick={() => handlePayCommission(commission)}
-                                            >
-                                                Payer
-                                            </Button>
-                                        ) : (
-                                            <span style={{ fontSize: '0.875rem', color: 'var(--success)' }}>
-                                                ✓ Payée le {format(new Date(commission.paidAt), 'dd/MM/yyyy', { locale: fr })}
-                                            </span>
-                                        )}
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                {loading ? (
+                    <div style={{ padding: '2rem', textAlign: 'center' }}>Chargement...</div>
+                ) : (
+                    <DataTable
+                        columns={columns}
+                        data={commissions}
+                        renderRowActions={renderRowActions}
+                        searchPlaceholder="Rechercher une commission..."
+                    />
+                )}
             </Card>
 
-            {/* Payment Modal */}
-            <CommissionPaymentModal
-                isOpen={isPaymentModalOpen}
-                onClose={() => setIsPaymentModalOpen(false)}
-                commission={selectedCommission}
-                invoice={MOCK_INVOICES.find(inv => inv.id === selectedCommission?.invoiceId)}
-            />
         </div>
     );
 };

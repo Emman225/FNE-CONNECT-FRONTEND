@@ -1,42 +1,46 @@
 import React, { useState } from 'react';
 import Button from '../../../../components/ui/Button';
 import { FileCheck, X, Download, Share2 } from 'lucide-react';
-// import { QRCodeSVG } from 'qrcode.react';
 import { useNotifications } from '../../../../context/NotificationContext';
 import { formatCurrency } from '../../../../utils/financialUtils';
+import { invoiceService } from '../../../../services/invoiceService';
+import toast from 'react-hot-toast';
 
 const FneInvoiceModal = ({ isOpen, onClose, invoice }) => {
     const { showSuccess, showLoading, dismissToast } = useNotifications();
     const [isGenerating, setIsGenerating] = useState(false);
-    const [fneGenerated, setFneGenerated] = useState(invoice?.fneNumber ? true : false);
+    const [fneGenerated, setFneGenerated] = useState(invoice?.status === 'sent' || invoice?.dgiSynced);
     const [fneData, setFneData] = useState({
-        number: invoice?.fneNumber || null,
-        qrCode: invoice?.fneQrCode || null,
-        generatedAt: invoice?.fneGeneratedAt || null
+        number: invoice?.dgiUid || null,
+        qrCode: invoice?.dgiQrCode || null,
+        generatedAt: invoice?.updatedAt || null
     });
 
     if (!isOpen || !invoice) return null;
 
     const handleGenerateFNE = async () => {
         setIsGenerating(true);
-        const loadingToast = showLoading('Génération de la facture FNE en cours...');
+        const loadingToast = showLoading('Certification fiscale via la DGI en cours...');
 
-        // Simulate API call to DGI
-        setTimeout(() => {
-            const fneNumber = `FNE-CI-${new Date().getFullYear()}-${Math.random().toString().slice(2, 12)}`;
-            const qrCodeData = `https://dgi.gouv.ci/verify/${fneNumber}`;
+        try {
+            const response = await invoiceService.finalize(invoice.id);
 
             setFneData({
-                number: fneNumber,
-                qrCode: qrCodeData,
-                generatedAt: new Date().toISOString()
+                number: response.invoice.dgiUid,
+                qrCode: response.invoice.dgiQrCode,
+                generatedAt: response.invoice.updatedAt || new Date().toISOString()
             });
 
             setFneGenerated(true);
+            showSuccess('Facture certifiée avec succès par la DGI !');
+        } catch (error) {
+            console.error("DGI Certification failed:", error);
+            const errorMsg = error.response?.data?.error || "Erreur lors de la certification fiscale.";
+            toast.error(errorMsg);
+        } finally {
             setIsGenerating(false);
             dismissToast(loadingToast);
-            showSuccess('Facture FNE générée avec succès !');
-        }, 2500);
+        }
     };
 
     const handleDownload = () => {

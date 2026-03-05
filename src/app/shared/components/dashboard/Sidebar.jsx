@@ -128,6 +128,18 @@ const Sidebar = () => {
             path: `${basePath}/reporting`,
             key: menuKeys.REPORTING_GLOBAL
         },
+        {
+            icon: <Shield size={20} />,
+            label: 'Journaux d\'Audit',
+            path: `${basePath}/audit`,
+            key: menuKeys.AUDIT_LOGS
+        },
+        {
+            icon: <ShieldCheck size={20} />,
+            label: 'Sécurité',
+            path: `${basePath}/security-settings`,
+            key: menuKeys.SECURITY_SETTINGS
+        },
 
         /*
         { type: 'separator' },

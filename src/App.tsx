@@ -1,12 +1,16 @@
-﻿import { Routes, Route, Navigate } from 'react-router-dom';
+﻿import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
+import { AnimatePresence } from 'framer-motion';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { PublicRoutes } from './routes/public.routes';
 import { AdminRoutes } from './routes/admin.routes';
 
 function App() {
+    const location = useLocation();
+
     // console.log('🚀 App component rendering...');
     return (
-        <>
+        <ThemeProvider>
             <Toaster
                 position="top-right"
                 toastOptions={{
@@ -43,17 +47,19 @@ function App() {
                     },
                 }}
             />
-            <Routes>
-                {PublicRoutes}
-                {AdminRoutes}
+            <AnimatePresence mode="wait">
+                <Routes location={location} key={location.pathname}>
+                    {PublicRoutes}
+                    {AdminRoutes}
 
-                {/* Unauthorized */}
-                <Route path="/unauthorized" element={<div style={{ padding: '2rem', textAlign: 'center' }}><h1>Accès non autorisé</h1><p>Vous n'avez pas les permissions nécessaires pour accéder à cette page.</p></div>} />
+                    {/* Unauthorized */}
+                    <Route path="/unauthorized" element={<div style={{ padding: '2rem', textAlign: 'center' }}><h1>Accès non autorisé</h1><p>Vous n'avez pas les permissions nécessaires pour accéder à cette page.</p></div>} />
 
-                {/* Fallback */}
-                <Route path="*" element={<Navigate to="/" replace />} />
-            </Routes>
-        </>
+                    {/* Fallback */}
+                    <Route path="*" element={<Navigate to="/" replace />} />
+                </Routes>
+            </AnimatePresence>
+        </ThemeProvider>
     );
 }
 

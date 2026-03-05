@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
-import { Search, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Filter, Download, Plus, MoreHorizontal, Edit2, Trash2 } from 'lucide-react';
+import { Search, ChevronDown, ChevronUp, ChevronLeft, ChevronRight, Filter, Download, Plus, MoreHorizontal, Edit2, Trash2, FileText } from 'lucide-react';
+import html2pdf from 'html2pdf.js';
 import './DataTable.css';
 
 /**
@@ -127,6 +128,24 @@ const DataTable = ({
         document.body.removeChild(link);
     };
 
+    const handleExportPDF = () => {
+        if (!data.length) return;
+
+        const element = document.querySelector('.datatable-container');
+        const opt = {
+            margin: 10,
+            filename: `${title || 'export'}_${new Date().toISOString()}.pdf`,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: {
+                scale: 2,
+                ignoreElements: (el) => el.classList.contains('no-export')
+            },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'landscape' }
+        };
+
+        html2pdf().set(opt).from(element).save();
+    };
+
     return (
         <div className="datatable-wrapper fade-in">
             {/* Header / Toolbar */}
@@ -153,9 +172,14 @@ const DataTable = ({
                     )}
 
                     {/* Extras */}
-                    <button className="btn btn-secondary btn-sm" onClick={handleExport} title="Exporter CSV">
-                        <Download size={16} />
-                    </button>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button className="btn btn-secondary btn-sm" onClick={handleExport} title="Exporter CSV">
+                            <Download size={16} /> <span className="hide-on-mobile">CSV</span>
+                        </button>
+                        <button className="btn btn-secondary btn-sm" onClick={handleExportPDF} title="Exporter PDF">
+                            <FileText size={16} /> <span className="hide-on-mobile">PDF</span>
+                        </button>
+                    </div>
 
                     {/* Custom Toolbar Actions (e.g. Add Button) */}
                     {renderToolbar}
@@ -168,7 +192,7 @@ const DataTable = ({
                     <thead>
                         <tr>
                             {selectable && (
-                                <th style={{ width: '40px', padding: '0 1rem' }}>
+                                <th className="no-export" style={{ width: '40px', padding: '0 1rem' }}>
                                     <input
                                         type="checkbox"
                                         className="datatable-checkbox"
@@ -192,7 +216,7 @@ const DataTable = ({
                                     </div>
                                 </th>
                             ))}
-                            {(actions || renderRowActions) && <th style={{ width: '80px', textAlign: 'right' }}>Actions</th>}
+                            {(actions || renderRowActions) && <th className="no-export" style={{ width: '100px', textAlign: 'right' }}>Actions</th>}
                         </tr>
                     </thead>
                     <tbody>
@@ -215,7 +239,7 @@ const DataTable = ({
                                     style={{ cursor: onRowClick ? 'pointer' : 'default' }}
                                 >
                                     {selectable && (
-                                        <td style={{ padding: '0 1rem' }} onClick={(e) => e.stopPropagation()}>
+                                        <td className="no-export" style={{ padding: '0 1rem' }} onClick={(e) => e.stopPropagation()}>
                                             <input
                                                 type="checkbox"
                                                 className="datatable-checkbox"
@@ -230,7 +254,7 @@ const DataTable = ({
                                         </td>
                                     ))}
                                     {(actions || renderRowActions) && (
-                                        <td style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
+                                        <td className="no-export" style={{ textAlign: 'right' }} onClick={(e) => e.stopPropagation()}>
                                             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
                                                 {renderRowActions ? renderRowActions(row) : actions.map((action, actionIndex) => (
                                                     <button

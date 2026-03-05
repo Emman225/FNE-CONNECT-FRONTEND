@@ -11,75 +11,33 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import showAlert from '../../../utils/sweetAlert';
 import emailService from '../../../services/emailService';
+import { invoiceService } from '../../../services/invoiceService';
+import { useNotifications } from '../../../context/NotificationContext';
 
 const InvoiceDetailPage = () => {
     const { id } = useParams();
     const navigate = useNavigate();
     const { basePath } = useDashboardPath();
+    const { showError } = useNotifications();
     const [loading, setLoading] = useState(true);
     const [document, setDocument] = useState(null);
     const documentRef = useRef();
 
     useEffect(() => {
-        const path = window.location.pathname;
-        let type = 'invoice';
-        if (path.includes('/quotes/')) type = 'quote';
-        if (path.includes('/proformas/')) type = 'proforma';
+        const fetchDocument = async () => {
+            setLoading(true);
+            try {
+                const data = await invoiceService.getById(id);
+                setDocument(data);
+            } catch (error) {
+                console.error("Failed to fetch document", error);
+                showError("Erreur lors du chargement du document");
+            } finally {
+                setLoading(false);
+            }
+        };
 
-        setTimeout(() => {
-            const isInvoice = type === 'invoice';
-            const isQuote = type === 'quote';
-            const isProforma = type === 'proforma';
-
-            const mockData = {
-                id: id,
-                number: isInvoice ? `1441119U250000000001` :
-                    isQuote ? `DEV-2023-${id.toString().padStart(3, '0')}` :
-                        `PRO-2023-${id.toString().padStart(3, '0')}`,
-                type: type,
-                issuer: {
-                    name: 'SITE COTE D\'IVOIRE',
-                    ncc: '1441119U',
-                    regime: 'TEE',
-                    center: '965 Impôts de la Riviera I',
-                    rccm: 'ciabj2014b22650 du 07-11-2014',
-                    bank: 'SITE COTE D\'IVOIRE-UBA- CI150 01001 101090010792 57',
-                    establishment: 'SITE COTE D\'IVOIRE',
-                    address: 'BP 3321 ABIDJAN (VILLE) 03',
-                    phone: '0704729820',
-                    email: 'loss4fr@yahoo.fr',
-                    seller: 'Gestionnaire principal LOSSENI',
-                    pdv: 'SIEGE',
-                    location: 'CITE FEDERME',
-                    legalFooter: 'SITE-CÔTE D\'IVOIRE, SARL au Capital de 1 000 000-RCCM N° CI-ABJ-2014-B-22650, CC N°1441119 IN, CNPS N°244489'
-                },
-                client: {
-                    name: 'AFRICA PROJECT MANAGEMENT',
-                    phone: '0707070707',
-                    email: 'k.dibi@apm.ci',
-                    address: 'Abidjan, CI',
-                    ncc: '1339220 N',
-                    regime: 'Particulier'
-                },
-                dateAt: '05/11/2025 22:13:39',
-                createdAt: '2025-11-05T22:13:39',
-                paymentMode: 'Virement',
-                items: [
-                    { id: 1, ref: '01APM082025', name: 'Facture prestation de service PMO du Mois d\'Aout 2025', quantity: 11, unit: 'JOURS', price: 50000, discount: 0, tvaRate: 0 }
-                ],
-                totalHT: 550000,
-                tvaAmount: 0,
-                totalTTC: 550000,
-                otherTaxes: 0,
-                netToPay: 550000,
-                status: isInvoice
-                    ? (['1', '104'].includes(id) ? 'fne_generated' : ['4', '5', '101', '102', '103'].includes(id) ? 'verifying' : id === '2' ? 'pending' : 'draft')
-                    : 'draft',
-                fneNumber: isInvoice && ['1', '104'].includes(id) ? '1441119U250000000001' : null
-            };
-            setDocument(mockData);
-            setLoading(false);
-        }, 500);
+        fetchDocument();
     }, [id]);
 
     if (loading || !document) {
@@ -96,9 +54,9 @@ const InvoiceDetailPage = () => {
         proforma: 'Facture Proforma'
     };
 
-    const isFneGenerated = document.status === 'fne_generated';
-    const isVerifying = document.status === 'verifying';
-    const isDraft = !isFneGenerated && (document.status === 'draft' || isVerifying || (document.type === 'invoice' && document.status !== 'paid'));
+    const isFneGenerated = document.status === 'sent' || document.dgiSynced;
+    const isVerifying = document.status === 'submitted'; // Or any specific intermediate status
+    const isDraft = document.status === 'draft';
 
     const handlePrint = () => {
         window.print();
@@ -144,11 +102,11 @@ const InvoiceDetailPage = () => {
                 const result = await emailService.sendEmail({
                     recipientEmail,
                     senderEmail,
-                    invoiceNumber: document.number,
-                    clientName: document.client.name,
-                    sellerName: document.issuer.name,
-                    invoiceDate: document.dateAt,
-                    invoiceAmount: document.netToPay.toLocaleString()
+                    invoiceNumber: document.invoiceNumber || document.number,
+                    clientName: document.clientInfo.clientName,
+                    sellerName: document.issuer?.name,
+                    invoiceDate: document.issueDate || (document.createdAt && format(document.createdAt, 'dd/MM/yyyy')),
+                    invoiceAmount: document.totals.netAPayer.toLocaleString()
                 });
 
                 if (result.success) {
@@ -163,8 +121,8 @@ const InvoiceDetailPage = () => {
                         'Le service d\'envoi automatique n\'est pas encore configuré. Ouverture de votre client mail local...'
                     );
 
-                    const subject = `${typeLabels[document.type]} N° ${document.number}`;
-                    const body = `Bonjour ${document.client.name},\n\nVeuillez trouver ci-joint votre document.\n\nLien du document : ${window.location.href}`;
+                    const subject = `${typeLabels[document.documentType?.toLowerCase() || 'invoice']} N° ${document.invoiceNumber || document.number}`;
+                    const body = `Bonjour ${document.clientInfo.clientName},\n\nVeuillez trouver ci-joint votre document.\n\nLien du document : ${window.location.href}`;
 
                     setTimeout(() => {
                         window.location.href = `mailto:${recipientEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
@@ -195,7 +153,7 @@ const InvoiceDetailPage = () => {
                     <div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.25rem' }}>
                             <h1 style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--text-primary)', margin: 0 }}>
-                                {typeLabels[document.type]} #{document.id}
+                                {typeLabels[document.documentType?.toLowerCase() || 'invoice']} #{document.id}
                             </h1>
                             <StatusBadge status={document.status} />
                         </div>
@@ -204,7 +162,19 @@ const InvoiceDetailPage = () => {
                 {isFneGenerated && (
                     <div style={{ display: 'flex', gap: '0.75rem' }}>
                         <button onClick={handlePrint} className="btn btn-secondary"><Printer size={18} /> Imprimer</button>
-                        <button onClick={handleDownload} className="btn btn-secondary"><Download size={18} /> Télécharger</button>
+                        {document.fneOfficialPdfPath ? (
+                            <a
+                                href={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000'}/storage/${document.fneOfficialPdfPath}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="btn btn-secondary"
+                                style={{ textDecoration: 'none' }}
+                            >
+                                <FileText size={18} /> PDF Officiel
+                            </a>
+                        ) : (
+                            <button onClick={handleDownload} className="btn btn-secondary"><Download size={18} /> Télécharger</button>
+                        )}
                         <button onClick={handleShare} className="btn btn-primary"><Mail size={18} /> Partager</button>
                     </div>
                 )}
@@ -248,7 +218,7 @@ const InvoiceDetailPage = () => {
                                 padding: '30px',
                                 textAlign: 'center'
                             }}>
-                                {isVerifying ? 'Payé - En vérification' : (document.type === 'invoice' ? 'Facture Brouillon' : document.type === 'quote' ? 'Devis Brouillon' : 'Proforma Brouillon')}
+                                {isVerifying ? 'Payé - En vérification' : (document.documentType === 'INVOICE' ? 'Facture Brouillon' : document.documentType === 'QUOTE' ? 'Devis Brouillon' : 'Proforma Brouillon')}
                                 <div style={{ fontSize: '20px', marginTop: '10px' }}>CERTIFICATION FNE EN ATTENTE</div>
                             </div>
                         )}
@@ -264,10 +234,10 @@ const InvoiceDetailPage = () => {
                                 fontSize: '0.9rem',
                                 lineHeight: '1.4'
                             }}>
-                                <div style={{ fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '0.4rem' }}>{document.issuer.name}</div>
-                                <div>NCC : {document.issuer.ncc}</div>
-                                <div>Régime d'imposition : {document.issuer.regime}</div>
-                                <div>Centre des impôts : {document.issuer.center}</div>
+                                <div style={{ fontWeight: 'bold', fontSize: '1.1rem', marginBottom: '0.4rem' }}>{document.issuer?.name}</div>
+                                <div>NCC : {document.issuer?.ncc}</div>
+                                <div>Régime d'imposition : {document.issuer?.regime}</div>
+                                <div>Centre des impôts : {document.issuer?.center}</div>
                             </div>
 
                             {/* Logo & Doc Title Section */}
@@ -277,7 +247,7 @@ const InvoiceDetailPage = () => {
                                     <div style={{ fontWeight: 'bold', fontSize: '1.4rem' }}>SITE <span style={{ color: '#f59e0b' }}>Côte d'Ivoire</span></div>
                                 </div>
                                 <div style={{ fontWeight: 'bold', fontSize: '0.95rem', marginBottom: '1.5rem' }}>
-                                    {typeLabels[document.type]} N° {document.number}
+                                    {typeLabels[document.documentType?.toLowerCase() || 'invoice']} N° {document.invoiceNumber || document.number}
                                 </div>
                                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
                                     {/* Verification QR Code (Official) */}
@@ -300,24 +270,21 @@ const InvoiceDetailPage = () => {
                         <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 0.9fr', gap: '1.5rem', marginBottom: '2.5rem' }}>
                             {/* Left: Seller Legal Details */}
                             <div style={{ fontSize: '0.85rem', lineHeight: '1.5' }}>
-                                <div style={{ marginBottom: '0.8rem' }}>RCCM : <b>{document.issuer.rccm}</b></div>
+                                <div style={{ marginBottom: '0.8rem' }}>RCCM : <b>{document.issuer?.rccm}</b></div>
                                 <div style={{ marginBottom: '0.8rem' }}>
                                     <div>Références bancaires :</div>
-                                    <div style={{ fontWeight: '600' }}>{document.issuer.bank}</div>
+                                    <div style={{ fontWeight: '600' }}>{document.issuer?.bank}</div>
                                 </div>
                                 <div style={{ marginBottom: '0.8rem' }}>
-                                    <div>Établissement : {document.issuer.establishment}</div>
-                                    <div>Adresse : {document.issuer.address}</div>
-                                    <div>N° Tel : <b>{document.issuer.phone}</b></div>
-                                    <div>Mail : {document.issuer.email}</div>
+                                    <div>Adresse : {document.issuer?.address}</div>
+                                    <div>N° Tel : <b>{document.issuer?.phone}</b></div>
+                                    <div>Mail : {document.issuer?.email}</div>
                                 </div>
                                 <div style={{ backgroundColor: '#fcfcfc', padding: '0.5rem', borderLeft: '3px solid #eee' }}>
-                                    <div>Nom du vendeur : {document.issuer.seller}</div>
-                                    <div>Nom de PDV : {document.issuer.pdv}</div>
-                                    <div>Date et heure : <b>{document.dateAt}</b></div>
-                                    <div>Mode de paiement : <b>{document.paymentMode}</b></div>
+                                    <div>Date : <b>{document.issueDate || (document.createdAt && format(document.createdAt, 'dd/MM/yyyy'))}</b></div>
+                                    <div>Mode de paiement : <b>{document.paymentMethod}</b></div>
                                 </div>
-                                <div style={{ marginTop: '1rem', fontWeight: 'bold', fontSize: '0.9rem' }}>ADRESSE : {document.issuer.location}</div>
+                                <div style={{ marginTop: '1rem', fontWeight: 'bold', fontSize: '0.9rem' }}>ADRESSE : {document.issuer?.city}</div>
                             </div>
 
                             {/* Right: Client Header & Info */}
@@ -331,10 +298,10 @@ const InvoiceDetailPage = () => {
                                     display: 'inline-block'
                                 }}>Client</div>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', fontSize: '0.9rem' }}>
-                                    <div style={{ display: 'flex', gap: '0.5rem' }}><span>Nom :</span> <b>{document.client.name}</b></div>
-                                    <div style={{ display: 'flex', gap: '0.5rem' }}><span>Adresse :</span> <span>{document.client.address}</span></div>
-                                    <div style={{ display: 'flex', gap: '0.5rem' }}><span>NCC :</span> <b>{document.client.ncc}</b></div>
-                                    <div style={{ display: 'flex', gap: '0.5rem' }}><span>Régime :</span> <span>{document.client.regime}</span></div>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}><span>Nom :</span> <b>{document.clientInfo.clientName}</b></div>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}><span>Adresse :</span> <span>{document.clientInfo.address || 'Abidjan, CI'}</span></div>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}><span>NCC :</span> <b>{document.clientInfo.ncc}</b></div>
+                                    <div style={{ display: 'flex', gap: '0.5rem' }}><span>Régime :</span> <span>{document.billingType}</span></div>
                                 </div>
                             </div>
                         </div>
@@ -355,16 +322,16 @@ const InvoiceDetailPage = () => {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {document.items.map((item, idx) => (
+                                    {document.lineItems.map((item, idx) => (
                                         <tr key={idx} style={{ borderBottom: '1px solid #000', fontSize: '0.85rem' }}>
-                                            <td style={{ borderRight: '1.5px solid #000', padding: '0.75rem' }}>{item.ref}</td>
-                                            <td style={{ borderRight: '1.5px solid #000', padding: '0.75rem' }}>{item.name}</td>
-                                            <td style={{ borderRight: '1.5px solid #000', padding: '0.75rem', textAlign: 'right' }}>{item.price.toLocaleString()}</td>
+                                            <td style={{ borderRight: '1.5px solid #000', padding: '0.75rem' }}>{item.reference}</td>
+                                            <td style={{ borderRight: '1.5px solid #000', padding: '0.75rem' }}>{item.designation}</td>
+                                            <td style={{ borderRight: '1.5px solid #000', padding: '0.75rem', textAlign: 'right' }}>{item.unitPriceHT.toLocaleString()}</td>
                                             <td style={{ borderRight: '1.5px solid #000', padding: '0.75rem', textAlign: 'center' }}>{item.quantity}</td>
-                                            <td style={{ borderRight: '1.5px solid #000', padding: '0.75rem' }}>{item.unit}</td>
-                                            <td style={{ borderRight: '1.5px solid #000', padding: '0.75rem', textAlign: 'center' }}>STVAD ({item.tvaRate})</td>
-                                            <td style={{ borderRight: '1.5px solid #000', padding: '0.75rem', textAlign: 'center' }}>{item.discount}</td>
-                                            <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: 'bold' }}>{(item.price * item.quantity).toLocaleString()}</td>
+                                            <td style={{ borderRight: '1.5px solid #000', padding: '0.75rem' }}>{item.unitOfMeasure}</td>
+                                            <td style={{ borderRight: '1.5px solid #000', padding: '0.75rem', textAlign: 'center' }}>{item.taxCode}</td>
+                                            <td style={{ borderRight: '1.5px solid #000', padding: '0.75rem', textAlign: 'center' }}>{item.discountPercent}</td>
+                                            <td style={{ padding: '0.75rem', textAlign: 'right', fontWeight: 'bold' }}>{(item.unitPriceHT * item.quantity).toLocaleString()}</td>
                                         </tr>
                                     ))}
                                     {/* Placeholder Spacer Rows */}
@@ -388,23 +355,23 @@ const InvoiceDetailPage = () => {
                                 <tbody>
                                     <tr style={{ borderBottom: '1.5px solid #000' }}>
                                         <td style={{ borderRight: '1.5px solid #000', padding: '0.6rem 1.2rem', textAlign: 'right', backgroundColor: '#f9f9f9', width: '60%' }}>TOTAL HT</td>
-                                        <td style={{ padding: '0.6rem 1.2rem', textAlign: 'right' }}>{document.totalHT.toLocaleString()}</td>
+                                        <td style={{ padding: '0.6rem 1.2rem', textAlign: 'right' }}>{document.totals.subtotalHT.toLocaleString()}</td>
                                     </tr>
                                     <tr style={{ borderBottom: '1.5px solid #000' }}>
                                         <td style={{ borderRight: '1.5px solid #000', padding: '0.6rem 1.2rem', textAlign: 'right', backgroundColor: '#f9f9f9' }}>TVA</td>
-                                        <td style={{ padding: '0.6rem 1.2rem', textAlign: 'right' }}>{document.tvaAmount.toLocaleString()}</td>
+                                        <td style={{ padding: '0.6rem 1.2rem', textAlign: 'right' }}>{document.totals.totalTaxAmount.toLocaleString()}</td>
                                     </tr>
                                     <tr style={{ borderBottom: '1.5px solid #000' }}>
                                         <td style={{ borderRight: '1.5px solid #000', padding: '0.6rem 1.2rem', textAlign: 'right', backgroundColor: '#f9f9f9' }}>TOTAL TTC</td>
-                                        <td style={{ padding: '0.6rem 1.2rem', textAlign: 'right' }}>{document.totalTTC.toLocaleString()}</td>
+                                        <td style={{ padding: '0.6rem 1.2rem', textAlign: 'right' }}>{document.totals.totalTTC.toLocaleString()}</td>
                                     </tr>
                                     <tr style={{ borderBottom: '1.5px solid #000' }}>
                                         <td style={{ borderRight: '1.5px solid #000', padding: '0.6rem 1.2rem', textAlign: 'right', backgroundColor: '#f9f9f9' }}>AUTRES TAXES</td>
-                                        <td style={{ padding: '0.6rem 1.2rem', textAlign: 'right' }}>{document.otherTaxes.toLocaleString()}</td>
+                                        <td style={{ padding: '0.6rem 1.2rem', textAlign: 'right' }}>{(document.totals.totalTTCTaxes || 0).toLocaleString()}</td>
                                     </tr>
                                     <tr style={{ backgroundColor: '#fff', fontSize: '1.05rem' }}>
                                         <td style={{ borderRight: '1.5px solid #000', padding: '0.8rem 1.2rem', textAlign: 'right', backgroundColor: '#f9f9f9' }}>TOTAL A PAYER</td>
-                                        <td style={{ padding: '0.8rem 1.2rem', textAlign: 'right', fontWeight: '900', color: '#000' }}>{document.netToPay.toLocaleString()}</td>
+                                        <td style={{ padding: '0.8rem 1.2rem', textAlign: 'right', fontWeight: '900', color: '#000' }}>{document.totals.netAPayer.toLocaleString()}</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -425,7 +392,7 @@ const InvoiceDetailPage = () => {
                                 <tbody>
                                     <tr style={{ borderBottom: '1px solid #eee' }}>
                                         <td style={{ borderRight: '1.5px solid #000', padding: '0.6rem' }}>TVA exo.lég - Pas de TVA sur HT 00,00% - D</td>
-                                        <td style={{ borderRight: '1.5px solid #000', padding: '0.6rem', textAlign: 'right' }}>{document.totalHT.toLocaleString()}</td>
+                                        <td style={{ borderRight: '1.5px solid #000', padding: '0.6rem', textAlign: 'right' }}>{document.totals.subtotalHT.toLocaleString()}</td>
                                         <td style={{ borderRight: '1.5px solid #000', padding: '0.6rem', textAlign: 'center' }}>0%</td>
                                         <td style={{ padding: '0.6rem', textAlign: 'right' }}>0</td>
                                     </tr>
@@ -446,7 +413,7 @@ const InvoiceDetailPage = () => {
                             fontWeight: '600',
                             color: '#444'
                         }}>
-                            {document.issuer.legalFooter}
+                            {document.issuer?.legalFooter || 'SITE-CÔTE D\'IVOIRE, SARL au Capital de 1 000 000-RCCM N° CI-ABJ-2014-B-22650, CC N°1441119 IN, CNPS N°244489'}
                         </div>
                     </div>
                 </div>
@@ -460,14 +427,14 @@ const InvoiceDetailPage = () => {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                             <div style={{ padding: '1rem', backgroundColor: 'var(--bg-main)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)' }}>
                                 <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>FNE / DGI</div>
-                                <div style={{ fontWeight: '800', color: document.fneNumber ? 'var(--success)' : 'var(--warning)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                    {document.fneNumber ? <><CheckCircle size={16} /> CERTIFIÉ DGI</> : <><FileText size={16} /> BROUILLON UNITAIRE</>}
+                                <div style={{ fontWeight: '800', color: isFneGenerated ? 'var(--success)' : 'var(--warning)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                    {isFneGenerated ? <><CheckCircle size={16} /> CERTIFIÉ DGI</> : <><FileText size={16} /> BROUILLON UNITAIRE</>}
                                 </div>
                             </div>
                             <div style={{ padding: '1rem', backgroundColor: isDraft ? 'var(--warning-light)' : 'var(--success-light)', borderRadius: 'var(--radius-md)' }}>
                                 <div style={{ fontSize: '0.8rem', color: isDraft ? 'var(--warning)' : 'var(--success)', marginBottom: '0.4rem' }}>Statut de Vente</div>
                                 <div style={{ fontWeight: '800', color: isDraft ? 'var(--warning)' : 'var(--success)' }}>
-                                    {isVerifying ? 'PAYÉ - EN VÉRIFICATION' : isDraft ? 'EN ATTENTE DE RÈGLEMENT' : 'DOCUMENT VALIDÉ'}
+                                    {document.status?.toUpperCase()}
                                 </div>
                             </div>
                         </div>

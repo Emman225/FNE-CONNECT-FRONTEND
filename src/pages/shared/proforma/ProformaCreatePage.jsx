@@ -5,35 +5,66 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useDashboardPath } from '../../../hooks/useDashboardPath';
 import showAlert from '../../../utils/sweetAlert';
 
+import { invoiceService } from '../../../services/invoiceService';
+import { useNotifications } from '../../../context/NotificationContext';
+
 const ProformaCreatePage = () => {
     const navigate = useNavigate();
     const { id } = useParams();
+    const { showError } = useNotifications();
     const isEditMode = !!id;
     const { basePath } = useDashboardPath();
+    const [loading, setLoading] = React.useState(false);
+    const [initialInvoiceData, setInitialInvoiceData] = React.useState(null);
+
+    React.useEffect(() => {
+        if (id) {
+            const fetchInvoice = async () => {
+                setLoading(true);
+                try {
+                    const response = await invoiceService.getById(id);
+                    setInitialInvoiceData(response);
+                } catch (error) {
+                    console.error("Failed to fetch proforma", error);
+                    showError("Erreur lors du chargement de la proforma");
+                } finally {
+                    setLoading(false);
+                }
+            };
+            fetchInvoice();
+        }
+    }, [id]);
 
     const handleSubmit = async (data) => {
         try {
-            console.log('Submitting proforma:', data);
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            await showAlert.success(
-                isEditMode ? 'Proforma Modifiée' : 'Proforma Créée',
-                isEditMode ? 'La proforma a été modifiée avec succès.' : 'La proforma a été créée avec succès.'
-            );
+            setLoading(true);
+            if (isEditMode) {
+                await invoiceService.update(id, data);
+                await showAlert.success('Proforma Modifiée', 'La proforma a été modifiée avec succès.');
+            } else {
+                await invoiceService.create(data);
+                await showAlert.success('Proforma Créée', 'La proforma a été créée avec succès.');
+            }
             navigate(`${basePath}/proformas`);
         } catch (error) {
             console.error('Error saving proforma:', error);
-            showAlert.error('Erreur', 'Erreur lors de l\'enregistrement de la proforma');
+            showError(error.response?.data?.message || "Erreur lors de l'enregistrement");
+        } finally {
+            setLoading(false);
         }
     };
 
     const handleSaveDraft = async (data) => {
         try {
-            console.log('Saving draft proforma:', data);
-            await new Promise(resolve => setTimeout(resolve, 500));
+            setLoading(true);
+            await invoiceService.create({ ...data, status: 'draft' });
             showAlert.success('Brouillon', 'Brouillon sauvegardé avec succès !');
+            navigate(`${basePath}/proformas`);
         } catch (error) {
             console.error('Error saving draft:', error);
-            showAlert.error('Erreur', 'Erreur lors de la sauvegarde du brouillon');
+            showError("Erreur lors de la sauvegarde du brouillon");
+        } finally {
+            setLoading(false);
         }
     };
 
@@ -53,9 +84,10 @@ const ProformaCreatePage = () => {
     return (
         <InvoiceForm
             invoiceId={id}
-            initialData={{
+            initialData={initialInvoiceData || {
                 documentType: DocumentType.PROFORMA
             }}
+            isLoading={loading}
             onSubmit={handleSubmit}
             onSaveDraft={handleSaveDraft}
             onCancel={handleCancel}

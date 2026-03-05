@@ -2,14 +2,15 @@ import React, { useState, useEffect } from 'react';
 import {
     FaFileInvoice, FaBuilding, FaUser, FaGlobe, FaLandmark,
     FaCreditCard, FaMoneyBillWave, FaPlus, FaTrash, FaCheck,
-    FaTimes, FaCalculator, FaInfoCircle, FaSave
+    FaTimes, FaCalculator, FaInfoCircle, FaSave, FaPaperclip,
+    FaUpload
 } from 'react-icons/fa';
 import {
     DocumentType,
     BillingType,
     PaymentMethod,
     UnitOfMeasure,
-    TaxRate,
+    TaxRateCode,
     type InvoiceFormData,
     type LineItem,
     type AdditionalTax,
@@ -30,6 +31,7 @@ import {
     createEmptyAdditionalTax,
     createEmptyTotalTax
 } from '../../../hooks/useInvoiceCalculations';
+import InvoiceCommissionModal from '../../modals/InvoiceCommissionModal';
 import './InvoiceForm.css';
 
 const InvoiceForm: React.FC<InvoiceFormProps> = ({
@@ -45,6 +47,9 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     headerTitle
 }) => {
     const isEditMode = !!invoiceId;
+    const [isCommissionModalOpen, setIsCommissionModalOpen] = useState(false);
+    const [pendingFormData, setPendingFormData] = useState<InvoiceFormData | null>(null);
+
     // ==================== ÉTAT DU FORMULAIRE ====================
 
     // Style pour le watermark
@@ -65,6 +70,7 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
     const [formData, setFormData] = useState<InvoiceFormData>({
         documentType: initialData?.documentType || DocumentType.INVOICE,
         billingType: initialData?.billingType || BillingType.B2B,
+        serviceType: initialData?.serviceType || 'vente_article',
         paymentMethod: initialData?.paymentMethod || PaymentMethod.BANK_TRANSFER,
         hasRNE: initialData?.hasRNE || false,
         rneNumber: initialData?.rneNumber || '',
@@ -84,6 +90,9 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
         additionalTaxes: initialData?.additionalTaxes || [],
         globalDiscount: initialData?.globalDiscount || { percent: 0, amount: 0 },
         totalTaxes: initialData?.totalTaxes || [],
+        purchaseOrderFile: initialData?.purchaseOrderFile,
+        deliveryNoteFile: initialData?.deliveryNoteFile,
+        acompte: initialData?.acompte || 0,
 
         totals: initialData?.totals || {
             subtotalHT: 0,
@@ -92,7 +101,9 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
             totalTaxAmount: 0,
             totalAdditionalTaxes: 0,
             totalTTCTaxes: 0,
-            totalTTC: 0
+            totalTTC: 0,
+            netAPayer: 0,
+            taxSummary: []
         }
     });
 
@@ -101,7 +112,8 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
         formData.lineItems,
         formData.additionalTaxes,
         formData.globalDiscount,
-        formData.totalTaxes
+        formData.totalTaxes,
+        formData.acompte
     );
 
     // Mettre à jour les totaux calculés
@@ -111,6 +123,19 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
             totals: calculatedTotals
         }));
     }, [calculatedTotals]);
+
+    // Mettre à jour le formulaire quand initialData change (mode édition)
+    useEffect(() => {
+        if (initialData && Object.keys(initialData).length > 0) {
+            setFormData(prev => ({
+                ...prev,
+                ...initialData,
+                clientInfo: { ...prev.clientInfo, ...initialData.clientInfo },
+                lineItems: initialData.lineItems || prev.lineItems,
+                totals: initialData.totals || prev.totals
+            }));
+        }
+    }, [initialData]);
 
     // ==================== HANDLERS ====================
 
@@ -214,11 +239,104 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
         }));
     };
 
+    const addLineItemTax = (itemId: string) => {
+        setFormData(prev => ({
+            ...prev,
+            lineItems: prev.lineItems.map(item => {
+                if (item.id === itemId) {
+                    return {
+                        ...item,
+                        additionalTaxes: [...(item.additionalTaxes || []), createEmptyAdditionalTax() as AdditionalTax]
+                    };
+                }
+                return item;
+            })
+        }));
+    };
+
+    const removeLineItemTax = (itemId: string, taxId: string) => {
+        setFormData(prev => ({
+            ...prev,
+            lineItems: prev.lineItems.map(item => {
+                if (item.id === itemId) {
+                    return {
+                        ...item,
+                        additionalTaxes: (item.additionalTaxes || []).filter(t => t.id !== taxId)
+                    };
+                }
+                return item;
+            })
+        }));
+    };
+
+    const handleLineItemAdditionalTaxChange = (itemId: string, taxId: string, field: keyof AdditionalTax, value: any) => {
+        setFormData(prev => ({
+            ...prev,
+            lineItems: prev.lineItems.map(item => {
+                if (item.id === itemId) {
+                    return {
+                        ...item,
+                        additionalTaxes: (item.additionalTaxes || []).map(t =>
+                            t.id === taxId ? { ...t, [field]: value } : t
+                        )
+                    };
+                }
+                return item;
+            })
+        }));
+    };
+
+    const handleFileChange = (field: 'purchaseOrderFile' | 'deliveryNoteFile', file: File | null) => {
+        setFormData(prev => ({
+            ...prev,
+            [field]: file || undefined
+        }));
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!readonly && onSubmit) {
-            await onSubmit(formData);
+            // Si c'est une nouvelle facture (pas en mode édition), ouvrir le modal de commission
+            if (!isEditMode) {
+                setPendingFormData(formData);
+                setIsCommissionModalOpen(true);
+            } else {
+                // En mode édition, soumettre directement sans redemander la commission
+                await onSubmit(formData);
+            }
         }
+    };
+
+    const handleCommissionPaymentSuccess = async (paymentMethod: string, transactionRef: string) => {
+        if (pendingFormData && onSubmit) {
+            // Ajouter les informations de commission aux données de la facture
+            const commissionRate = 0.025; // 2.5%
+            const commissionAmount = pendingFormData.totals.totalTTC * commissionRate;
+
+            const invoiceWithCommission: InvoiceFormData = {
+                ...pendingFormData,
+                commission: {
+                    rate: commissionRate,
+                    amount: commissionAmount,
+                    status: 'paid',
+                    paidAt: new Date(),
+                    paymentMethod,
+                    transactionRef
+                }
+            };
+
+            // Fermer le modal
+            setIsCommissionModalOpen(false);
+            setPendingFormData(null);
+
+            // Soumettre la facture avec les informations de commission
+            await onSubmit(invoiceWithCommission);
+        }
+    };
+
+    const handleCommissionModalClose = () => {
+        setIsCommissionModalOpen(false);
+        setPendingFormData(null);
     };
 
     const handleSaveDraft = async () => {
@@ -304,6 +422,23 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
                                 </span>
                             </div>
 
+                            {/* Type de vente */}
+                            <div className="form-field">
+                                <label className="form-label">
+                                    Type de vente <span className="form-label-required">*</span>
+                                </label>
+                                <select
+                                    className="form-select"
+                                    value={formData.serviceType || 'vente_article'}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, serviceType: e.target.value as 'vente_article' | 'prestation_services' }))}
+                                    disabled={readonly}
+                                    required
+                                >
+                                    <option value="vente_article">Vente d'articles</option>
+                                    <option value="prestation_services">Prestation de services</option>
+                                </select>
+                            </div>
+
                             {/* Mode de paiement */}
                             <div className="form-field">
                                 <label className="form-label">
@@ -356,6 +491,95 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
                                     />
                                 </div>
                             )}
+                        </div>
+                    </div>
+                </section>
+
+                {/* SECTION 1.5: DOCUMENTS joints */}
+                <section className="form-section">
+                    <div className="section-header">
+                        <div className="section-header-icon">
+                            <FaPaperclip />
+                        </div>
+                        <div className="section-header-content">
+                            <h2>Documents justificatifs</h2>
+                            <p>Ajoutez les documents liés à cette facture</p>
+                        </div>
+                    </div>
+
+                    <div className="section-body">
+                        <div className="form-grid form-grid-2">
+                            {/* Bon de commande ou contrat */}
+                            <div className="form-field">
+                                <label className="form-label">
+                                    Bon de commande ou contrat
+                                </label>
+                                <div className="file-upload-container">
+                                    <input
+                                        type="file"
+                                        id="purchaseOrderFile"
+                                        className="file-upload-input"
+                                        onChange={(e) => handleFileChange('purchaseOrderFile', e.target.files?.[0] || null)}
+                                        disabled={readonly}
+                                        accept=".pdf,.jpg,.jpeg,.png"
+                                        style={{ display: 'none' }}
+                                    />
+                                    <label htmlFor="purchaseOrderFile" className="file-upload-label" style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.75rem',
+                                        padding: '0.75rem 1rem',
+                                        background: '#f8fafc',
+                                        border: '2px dashed #e2e8f0',
+                                        borderRadius: '12px',
+                                        cursor: readonly ? 'not-allowed' : 'pointer',
+                                        transition: 'all 0.2s',
+                                        color: '#64748b'
+                                    }}>
+                                        <FaUpload style={{ color: '#3b82f6' }} />
+                                        <span style={{ fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {formData.purchaseOrderFile ? (typeof formData.purchaseOrderFile === 'string' ? 'Document déjà joint' : (formData.purchaseOrderFile as File).name) : 'Choisir un fichier...'}
+                                        </span>
+                                    </label>
+                                </div>
+                                <span className="form-help-text">PDF, JPG ou PNG (Max. 5Mo)</span>
+                            </div>
+
+                            {/* Bon de livraison */}
+                            <div className="form-field">
+                                <label className="form-label">
+                                    Bon de livraison
+                                </label>
+                                <div className="file-upload-container">
+                                    <input
+                                        type="file"
+                                        id="deliveryNoteFile"
+                                        className="file-upload-input"
+                                        onChange={(e) => handleFileChange('deliveryNoteFile', e.target.files?.[0] || null)}
+                                        disabled={readonly}
+                                        accept=".pdf,.jpg,.jpeg,.png"
+                                        style={{ display: 'none' }}
+                                    />
+                                    <label htmlFor="deliveryNoteFile" className="file-upload-label" style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '0.75rem',
+                                        padding: '0.75rem 1rem',
+                                        background: '#f8fafc',
+                                        border: '2px dashed #e2e8f0',
+                                        borderRadius: '12px',
+                                        cursor: readonly ? 'not-allowed' : 'pointer',
+                                        transition: 'all 0.2s',
+                                        color: '#64748b'
+                                    }}>
+                                        <FaUpload style={{ color: '#3b82f6' }} />
+                                        <span style={{ fontSize: '0.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                            {formData.deliveryNoteFile ? (typeof formData.deliveryNoteFile === 'string' ? 'Document déjà joint' : (formData.deliveryNoteFile as File).name) : 'Choisir un fichier...'}
+                                        </span>
+                                    </label>
+                                </div>
+                                <span className="form-help-text">PDF, JPG ou PNG (Max. 5Mo)</span>
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -613,14 +837,32 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
                                             <td>
                                                 <select
                                                     className="table-select"
-                                                    value={item.taxRate}
-                                                    onChange={(e) => handleLineItemChange(item.id, 'taxRate', parseFloat(e.target.value) as TaxRate)}
+                                                    value={item.taxCode}
+                                                    onChange={(e) => handleLineItemChange(item.id, 'taxCode', e.target.value as TaxRateCode)}
                                                     disabled={readonly}
                                                 >
                                                     {TAX_RATE_OPTIONS.map(option => (
                                                         <option key={option.value} value={option.value}>{option.label}</option>
                                                     ))}
                                                 </select>
+                                                {!readonly && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => addLineItemTax(item.id)}
+                                                        style={{
+                                                            fontSize: '10px',
+                                                            marginTop: '2px',
+                                                            display: 'block',
+                                                            color: 'var(--primary)',
+                                                            background: 'none',
+                                                            border: 'none',
+                                                            cursor: 'pointer',
+                                                            fontWeight: '600'
+                                                        }}
+                                                    >
+                                                        + Autre taxe
+                                                    </button>
+                                                )}
                                             </td>
                                             <td>
                                                 <span className="table-total">
@@ -644,6 +886,53 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
                                 </tbody>
                             </table>
                         </div>
+
+                        {/* LINE ADDITIONAL TAXES DISPLAY */}
+                        {formData.lineItems.some(item => (item.additionalTaxes ?? []).length > 0) && (
+                            <div className="line-additional-taxes-summary" style={{ marginTop: '1rem', padding: '1.5rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border-color)' }}>
+                                <h4 style={{ fontSize: '0.9rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.75rem', color: 'var(--primary)' }}>
+                                    <FaMoneyBillWave size={16} /> Taxes additionnelles par ligne
+                                </h4>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
+                                    {formData.lineItems.map(item =>
+                                        (item.additionalTaxes ?? []).length > 0 && (
+                                            <div key={`line-tax-${item.id}`} style={{ padding: '1rem', background: 'white', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-color)', boxShadow: 'var(--shadow-sm)' }}>
+                                                <div style={{ fontSize: '0.8rem', fontWeight: '700', marginBottom: '0.75rem', color: 'var(--text-primary)', borderBottom: '1px solid var(--bg-secondary)', paddingBottom: '0.5rem' }}>
+                                                    {item.designation || item.reference || 'Sans nom'}
+                                                </div>
+                                                {(item.additionalTaxes ?? []).map(tax => (
+                                                    <div key={tax.id} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                                                        <input
+                                                            type="text"
+                                                            className="table-input"
+                                                            style={{ flex: 2 }}
+                                                            value={tax.name}
+                                                            onChange={(e) => handleLineItemAdditionalTaxChange(item.id, tax.id, 'name', e.target.value)}
+                                                            placeholder="Nom taxe"
+                                                        />
+                                                        <input
+                                                            type="number"
+                                                            className="table-input"
+                                                            style={{ flex: 1 }}
+                                                            value={tax.percent}
+                                                            onChange={(e) => handleLineItemAdditionalTaxChange(item.id, tax.id, 'percent', parseFloat(e.target.value) || 0)}
+                                                            placeholder="%"
+                                                        />
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => removeLineItemTax(item.id, tax.id)}
+                                                            style={{ color: 'var(--danger)', background: 'none', border: 'none', cursor: 'pointer', padding: '0 0.5rem' }}
+                                                        >
+                                                            <FaTrash size={14} />
+                                                        </button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )
+                                    )}
+                                </div>
+                            </div>
+                        )}
 
                         {!readonly && (
                             <button
@@ -781,57 +1070,70 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
                 <section className="form-section">
                     <div className="section-header">
                         <div className="section-header-icon">
-                            <FaMoneyBillWave />
+                            <FaCalculator />
                         </div>
                         <div className="section-header-content">
-                            <h2>Taxes sur le total TTC</h2>
+                            <h2 style={{ textTransform: 'uppercase', fontSize: '1rem' }}>TAXES SUR TOTAL TTC</h2>
                             <p>Taxes appliquées après le calcul du TTC</p>
                         </div>
                     </div>
 
                     <div className="section-body">
                         {formData.totalTaxes.length > 0 && (
-                            <div className="form-grid form-grid-3">
-                                {formData.totalTaxes.map((tax) => (
-                                    <React.Fragment key={tax.id}>
-                                        <div className="form-field">
-                                            <label className="form-label">Nom de la taxe</label>
-                                            <input
-                                                type="text"
-                                                className="form-input"
-                                                value={tax.name}
-                                                onChange={(e) => handleTotalTaxChange(tax.id, 'name', e.target.value)}
-                                                placeholder="Ex: CTP"
-                                                disabled={readonly}
-                                            />
-                                        </div>
-                                        <div className="form-field">
-                                            <label className="form-label">Taxe %</label>
-                                            <input
-                                                type="number"
-                                                className="form-input"
-                                                value={tax.percent}
-                                                onChange={(e) => handleTotalTaxChange(tax.id, 'percent', parseFloat(e.target.value) || 0)}
-                                                min="0"
-                                                max="100"
-                                                step="0.01"
-                                                disabled={readonly}
-                                            />
-                                        </div>
-                                        <div className="form-field" style={{ display: 'flex', alignItems: 'flex-end' }}>
-                                            {!readonly && (
-                                                <button
-                                                    type="button"
-                                                    className="table-delete-btn"
-                                                    onClick={() => removeTotalTax(tax.id)}
-                                                    style={{ width: '100%', padding: '0.75rem' }}
-                                                >
-                                                    <FaTrash /> Supprimer
-                                                </button>
-                                            )}
-                                        </div>
-                                    </React.Fragment>
-                                ))}
+                            <div className="form-grid" style={{ gridTemplateColumns: 'minmax(200px, 2fr) 1fr 1.5fr auto', gap: '1rem', marginBottom: '1.5rem' }}>
+                                <div className="form-label" style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 600 }}>Nom</div>
+                                <div className="form-label" style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 600 }}>Taxe (%)</div>
+                                <div className="form-label" style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: 600 }}>Montant de la taxe sur le total TTC</div>
+                                <div></div>
+
+                                {formData.totalTaxes.map((tax) => {
+                                    // Base = TTC avant les taxes finales
+                                    const baseForTTC = formData.totals.totalTTC - formData.totals.totalTTCTaxes;
+                                    const amount = (baseForTTC * tax.percent) / 100;
+
+                                    return (
+                                        <React.Fragment key={tax.id}>
+                                            <div className="form-field">
+                                                <input
+                                                    type="text"
+                                                    className="form-input"
+                                                    value={tax.name}
+                                                    onChange={(e) => handleTotalTaxChange(tax.id, 'name', e.target.value)}
+                                                    placeholder="Ex: AIRSI"
+                                                    disabled={readonly}
+                                                />
+                                            </div>
+                                            <div className="form-field">
+                                                <input
+                                                    type="number"
+                                                    className="form-input"
+                                                    value={tax.percent}
+                                                    onChange={(e) => handleTotalTaxChange(tax.id, 'percent', parseFloat(e.target.value) || 0)}
+                                                    min="0"
+                                                    max="100"
+                                                    step="0.01"
+                                                    disabled={readonly}
+                                                />
+                                            </div>
+                                            <div className="form-field">
+                                                <div className="form-input" style={{ backgroundColor: '#f8fafc', textAlign: 'right', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', borderStyle: 'solid', borderColor: '#e2e8f0', color: '#64748b' }}>
+                                                    {formatCurrency(amount, formData.clientInfo.currency)}
+                                                </div>
+                                            </div>
+                                            <div className="form-field" style={{ display: 'flex', alignItems: 'center' }}>
+                                                {!readonly && (
+                                                    <button
+                                                        type="button"
+                                                        className="table-delete-btn"
+                                                        onClick={() => removeTotalTax(tax.id)}
+                                                    >
+                                                        <FaTrash size={14} />
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </React.Fragment>
+                                    );
+                                })}
                             </div>
                         )}
 
@@ -840,71 +1142,131 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
                                 type="button"
                                 className="add-item-btn"
                                 onClick={addTotalTax}
+                                style={{ border: 'none', background: 'none', color: '#0ea5e9', fontSize: '0.85rem', padding: 0, justifyContent: 'flex-start', boxShadow: 'none', transform: 'none' }}
                             >
-                                <FaPlus /> Ajouter une taxe
+                                <FaPlus size={10} /> <span style={{ textDecoration: 'underline' }}>Ajouter une taxe</span>
                             </button>
                         )}
                     </div>
                 </section>
 
-                {/* RÉCAPITULATIF */}
-                <div className="invoice-summary">
-                    <h3>
-                        <FaInfoCircle /> Récapitulatif
+                {/* RÉSUMÉ DE LA FACTURE */}
+                {/* RÉSUMÉ DE LA FACTURE UNIFIÉ */}
+                <div className="invoice-summary" style={{
+                    background: '#f1f8fe',
+                    borderRadius: '24px',
+                    padding: '2.5rem',
+                    marginTop: '2rem',
+                    border: '1px solid #e1eefc'
+                }}>
+                    <h3 style={{
+                        color: '#106bbd',
+                        textTransform: 'uppercase',
+                        fontSize: '0.9rem',
+                        fontWeight: 700,
+                        marginBottom: '1.5rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                    }}>
+                        RÉSUMÉ DE LA FACTURE
                     </h3>
 
-                    <div className="summary-row">
-                        <span className="summary-label">Sous-total HT</span>
-                        <span className="summary-value">
-                            {formatCurrency(formData.totals.subtotalHT, formData.clientInfo.currency)}
-                        </span>
+                    {/* Bloc Haut: Tableau des taxes (en blanc pour la distinction) */}
+                    <div style={{
+                        background: 'white',
+                        borderRadius: '16px',
+                        padding: '1.5rem',
+                        marginBottom: '2rem',
+                        border: '1px solid rgba(16, 107, 189, 0.1)',
+                        boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                    }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                            <thead>
+                                <tr style={{ borderBottom: '2px solid #f1f5f9' }}>
+                                    <th style={{ textAlign: 'left', padding: '0.75rem', fontSize: '0.7rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>CATÉGORIE</th>
+                                    <th style={{ textAlign: 'right', padding: '0.75rem', fontSize: '0.7rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>SOUS-TOTAL</th>
+                                    <th style={{ textAlign: 'center', padding: '0.75rem', fontSize: '0.7rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>TAUX</th>
+                                    <th style={{ textAlign: 'right', padding: '0.75rem', fontSize: '0.7rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase' }}>TOTAL TVA</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {formData.totals.taxSummary.map((tax, idx) => (
+                                    <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                                        <td style={{ padding: '0.875rem 0.75rem', fontSize: '0.85rem', color: '#334155' }}>{tax.label}</td>
+                                        <td style={{ textAlign: 'right', padding: '0.875rem 0.75rem', fontSize: '0.85rem', color: '#334155', fontWeight: 600 }}>{formatCurrency(tax.baseHT, formData.clientInfo.currency)}</td>
+                                        <td style={{ textAlign: 'center', padding: '0.875rem 0.75rem', fontSize: '0.85rem', color: '#334155' }}>{tax.rate}%</td>
+                                        <td style={{ textAlign: 'right', padding: '0.875rem 0.75rem', fontSize: '0.85rem', color: '#334155', fontWeight: 600 }}>{formatCurrency(tax.amount, formData.clientInfo.currency)}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
                     </div>
 
-                    <div className="summary-row">
-                        <span className="summary-label">Remise globale ({formData.globalDiscount.percent}%)</span>
-                        <span className="summary-value">
-                            - {formatCurrency(formData.totals.totalDiscount, formData.clientInfo.currency)}
-                        </span>
+                    {/* Bloc Bas: Totaux */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '0.75rem', borderBottom: '1px solid #e1eefc' }}>
+                            <span style={{ fontSize: '1rem', color: '#64748b', fontWeight: 500 }}>Total HT</span>
+                            <span style={{ fontSize: '1.1rem', color: '#1e293b', fontWeight: 700 }}>{formatCurrency(formData.totals.subtotalHT, formData.clientInfo.currency)}</span>
+                        </div>
+                        {formData.totals.totalDiscount > 0 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '0.75rem', borderBottom: '1px solid #e1eefc' }}>
+                                <span style={{ fontSize: '1rem', color: '#64748b', fontWeight: 500 }}>Remise ({formData.globalDiscount.percent}%)</span>
+                                <span style={{ fontSize: '1.1rem', color: '#10b981', fontWeight: 700 }}>- {formatCurrency(formData.totals.totalDiscount, formData.clientInfo.currency)}</span>
+                            </div>
+                        )}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '0.75rem', borderBottom: '1px solid #e1eefc' }}>
+                            <span style={{ fontSize: '1rem', color: '#64748b', fontWeight: 500 }}>Total HT après remise</span>
+                            <span style={{ fontSize: '1.1rem', color: '#1e293b', fontWeight: 700 }}>{formatCurrency(formData.totals.totalAfterDiscount, formData.clientInfo.currency)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '0.75rem', borderBottom: '1px solid #e1eefc' }}>
+                            <span style={{ fontSize: '1rem', color: '#64748b', fontWeight: 500 }}>Total TVA</span>
+                            <span style={{ fontSize: '1.1rem', color: '#1e293b', fontWeight: 700 }}>{formatCurrency(formData.totals.totalTaxAmount, formData.clientInfo.currency)}</span>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '0.75rem', borderBottom: '1px solid #e1eefc' }}>
+                            <span style={{ fontSize: '1rem', color: '#64748b', fontWeight: 500 }}>Total TTC</span>
+                            <span style={{ fontSize: '1.1rem', color: '#1e293b', fontWeight: 700 }}>{formatCurrency(formData.totals.totalTTC - formData.totals.totalTTCTaxes, formData.clientInfo.currency)}</span>
+                        </div>
+                        {formData.totals.totalTTCTaxes > 0 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: '0.75rem', borderBottom: '1px solid #e1eefc' }}>
+                                <span style={{ fontSize: '1rem', color: '#64748b', fontWeight: 500 }}>Autres taxes</span>
+                                <span style={{ fontSize: '1.1rem', color: '#1e293b', fontWeight: 700 }}>{formatCurrency(formData.totals.totalTTCTaxes, formData.clientInfo.currency)}</span>
+                            </div>
+                        )}
                     </div>
 
-                    <div className="summary-row">
-                        <span className="summary-label">Total après remise</span>
-                        <span className="summary-value">
-                            {formatCurrency(formData.totals.totalAfterDiscount, formData.clientInfo.currency)}
-                        </span>
+                    {/* NET A PAYER Block */}
+                    <div style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '1.75rem 2.5rem',
+                        background: 'linear-gradient(90deg, #10b981 0%, #0369a1 100%)',
+                        borderRadius: '16px',
+                        color: 'white',
+                        boxShadow: '0 10px 15px -3px rgba(3, 105, 161, 0.2)'
+                    }}>
+                        <span style={{ fontSize: '1.25rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>NET A PAYER</span>
+                        <span style={{ fontSize: '1.85rem', fontWeight: 800 }}>{formatCurrency(formData.totals.totalTTC, formData.clientInfo.currency)}</span>
                     </div>
 
-                    <div className="summary-row">
-                        <span className="summary-label">Taxes (lignes)</span>
-                        <span className="summary-value">
-                            {formatCurrency(formData.totals.totalTaxAmount, formData.clientInfo.currency)}
-                        </span>
-                    </div>
-
-                    {formData.additionalTaxes.length > 0 && (
-                        <div className="summary-row">
-                            <span className="summary-label">Autres taxes</span>
-                            <span className="summary-value">
-                                {formatCurrency(formData.totals.totalAdditionalTaxes, formData.clientInfo.currency)}
-                            </span>
+                    {/* Acompte / Reste à payer if relevant */}
+                    {formData.acompte > 0 && (
+                        <div style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            marginTop: '1rem',
+                            padding: '1.5rem 2.5rem',
+                            background: 'linear-gradient(90deg, #3b82f6 0%, #1d4ed8 100%)',
+                            borderRadius: '16px',
+                            color: 'white',
+                            boxShadow: '0 8px 12px -3px rgba(29, 78, 216, 0.2)'
+                        }}>
+                            <span style={{ fontSize: '1.1rem', fontWeight: 700, textTransform: 'uppercase' }}>Reste à payer</span>
+                            <span style={{ fontSize: '1.5rem', fontWeight: 800 }}>{formatCurrency(formData.totals.netAPayer, formData.clientInfo.currency)}</span>
                         </div>
                     )}
-
-                    {formData.totalTaxes.length > 0 && (
-                        <div className="summary-row">
-                            <span className="summary-label">Taxes sur TTC</span>
-                            <span className="summary-value">
-                                {formatCurrency(formData.totals.totalTTCTaxes, formData.clientInfo.currency)}
-                            </span>
-                        </div>
-                    )}
-
-                    <div className="summary-row total">
-                        <span className="summary-label">TOTAL TTC</span>
-                        <span className="summary-value">
-                            {formatCurrency(formData.totals.totalTTC, formData.clientInfo.currency)}
-                        </span>
-                    </div>
                 </div>
 
                 {/* ACTIONS */}
@@ -946,6 +1308,17 @@ const InvoiceForm: React.FC<InvoiceFormProps> = ({
                     </div>
                 )}
             </form>
+
+            {/* Commission Payment Modal */}
+            {pendingFormData && (
+                <InvoiceCommissionModal
+                    isOpen={isCommissionModalOpen}
+                    onClose={handleCommissionModalClose}
+                    onPaymentSuccess={handleCommissionPaymentSuccess}
+                    invoice={pendingFormData}
+                    commissionRate={0.025}
+                />
+            )}
         </div>
     );
 };

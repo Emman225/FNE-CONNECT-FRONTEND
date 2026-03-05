@@ -1,10 +1,13 @@
 import { useMemo } from 'react';
-import type {
+import {
     LineItem,
     AdditionalTax,
     GlobalDiscount,
     TotalTax,
-    InvoiceTotals
+    InvoiceTotals,
+    TaxRateCode,
+    TAX_RATE_VALUES,
+    TAX_RATE_LABELS
 } from '../types/invoice.types';
 
 /**
@@ -15,7 +18,8 @@ export function useInvoiceCalculations(
     lineItems: LineItem[],
     additionalTaxes: AdditionalTax[],
     globalDiscount: GlobalDiscount,
-    totalTaxes: TotalTax[]
+    totalTaxes: TotalTax[],
+    acompte: number = 0
 ): InvoiceTotals {
 
     return useMemo(() => {
@@ -32,13 +36,21 @@ export function useInvoiceCalculations(
         const totalAfterDiscount = subtotalHT - totalDiscount;
 
         // 4️⃣ Calcul du montant total des taxes (sur les lignes)
-        const totalTaxAmount = lineItems.reduce((sum, item) => {
+        let totalTaxAmount = 0;
+        lineItems.forEach(item => {
             const lineTotalHT = calculateLineItemTotal(item);
-            const taxAmount = (lineTotalHT * item.taxRate) / 100;
-            return sum + taxAmount;
-        }, 0);
+            const rate = TAX_RATE_VALUES[item.taxCode] || 0;
+            totalTaxAmount += (lineTotalHT * rate) / 100;
 
-        // 5️⃣ Calcul des autres taxes
+            // Taxes supplémentaires par ligne
+            if (item.additionalTaxes) {
+                item.additionalTaxes.forEach(tax => {
+                    totalTaxAmount += (lineTotalHT * tax.percent) / 100;
+                });
+            }
+        });
+
+        // 5️⃣ Calcul des autres taxes (globales)
         const totalAdditionalTaxes = additionalTaxes.reduce((sum, tax) => {
             const taxAmount = (totalAfterDiscount * tax.percent) / 100;
             return sum + taxAmount;
@@ -56,6 +68,78 @@ export function useInvoiceCalculations(
         // 8️⃣ Total final TTC
         const totalTTC = ttcBeforeFinalTaxes + totalTTCTaxes;
 
+        const taxSummaryMap = new Map<string, { label: string; baseHT: number; amount: number; rate: number }>();
+        lineItems.forEach(item => {
+            const lineHT = calculateLineItemTotal(item);
+
+            // Taxe principale
+            const rate = TAX_RATE_VALUES[item.taxCode] || 0;
+            const taxAmount = (lineHT * rate) / 100;
+
+            if (taxAmount > 0 || rate > 0) {
+                const existing = taxSummaryMap.get(item.taxCode) || { label: TAX_RATE_LABELS[item.taxCode], baseHT: 0, amount: 0, rate };
+                taxSummaryMap.set(item.taxCode, {
+                    ...existing,
+                    baseHT: existing.baseHT + lineHT,
+                    amount: existing.amount + taxAmount
+                });
+            }
+
+            // Taxes additionnelles par ligne
+            if (item.additionalTaxes) {
+                item.additionalTaxes.forEach(tax => {
+                    const addTaxAmount = (lineHT * tax.percent) / 100;
+                    if (addTaxAmount > 0) {
+                        const key = `ADD_${tax.name}`;
+                        const existing = taxSummaryMap.get(key) || { label: tax.name, baseHT: 0, amount: 0, rate: tax.percent };
+                        taxSummaryMap.set(key, {
+                            ...existing,
+                            baseHT: existing.baseHT + lineHT,
+                            amount: existing.amount + addTaxAmount
+                        });
+                    }
+                });
+            }
+        });
+
+        // Taxes additionnelles globales (sur HT)
+        additionalTaxes.forEach(tax => {
+            const taxAmount = (totalAfterDiscount * tax.percent) / 100;
+            if (taxAmount > 0 || tax.percent > 0) {
+                const key = `GLOBAL_ADD_${tax.id}`;
+                taxSummaryMap.set(key, {
+                    label: tax.name || 'Autre taxe',
+                    baseHT: totalAfterDiscount,
+                    amount: taxAmount,
+                    rate: tax.percent
+                });
+            }
+        });
+
+        // Taxes sur le total TTC (ex: AIRSI)
+        totalTaxes.forEach(tax => {
+            const taxAmount = (ttcBeforeFinalTaxes * tax.percent) / 100;
+            if (taxAmount > 0 || tax.percent > 0) {
+                const key = `TTC_${tax.id}`;
+                taxSummaryMap.set(key, {
+                    label: tax.name || 'Taxe sur TTC',
+                    baseHT: ttcBeforeFinalTaxes, // C'est une base TTC mais on utilise le même champ pour l'affichage
+                    amount: taxAmount,
+                    rate: tax.percent
+                });
+            }
+        });
+
+        const taxSummary = Array.from(taxSummaryMap.entries()).map(([key, data]) => ({
+            code: (key.startsWith('ADD_') || key.startsWith('TTC_') || key.startsWith('GLOBAL_ADD_') ? TaxRateCode.NONE : key) as TaxRateCode,
+            label: data.label,
+            baseHT: roundToTwo(data.baseHT),
+            rate: data.rate,
+            amount: roundToTwo(data.amount)
+        }));
+
+        const finalNetAPayer = totalTTC - acompte;
+
         return {
             subtotalHT: roundToTwo(subtotalHT),
             totalDiscount: roundToTwo(totalDiscount),
@@ -63,9 +147,11 @@ export function useInvoiceCalculations(
             totalTaxAmount: roundToTwo(totalTaxAmount),
             totalAdditionalTaxes: roundToTwo(totalAdditionalTaxes),
             totalTTCTaxes: roundToTwo(totalTTCTaxes),
-            totalTTC: roundToTwo(totalTTC)
+            totalTTC: roundToTwo(totalTTC),
+            netAPayer: roundToTwo(finalNetAPayer),
+            taxSummary
         };
-    }, [lineItems, additionalTaxes, globalDiscount, totalTaxes]);
+    }, [lineItems, additionalTaxes, globalDiscount, totalTaxes, acompte]);
 }
 
 /**
@@ -89,7 +175,8 @@ export function calculateLineItemTotal(item: LineItem): number {
  */
 export function calculateLineItemTax(item: LineItem): number {
     const lineTotalHT = calculateLineItemTotal(item);
-    const taxAmount = (lineTotalHT * item.taxRate) / 100;
+    const rate = TAX_RATE_VALUES[item.taxCode] || 0;
+    const taxAmount = (lineTotalHT * rate) / 100;
     return roundToTwo(taxAmount);
 }
 
@@ -180,7 +267,7 @@ export function createEmptyLineItem(): Partial<LineItem> {
         unitOfMeasure: 'PIECE' as any,
         unitPriceHT: 0,
         discountPercent: 0,
-        taxRate: 18 as any,
+        taxCode: TaxRateCode.TVA_18,
         totalHT: 0
     };
 }

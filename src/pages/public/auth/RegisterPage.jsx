@@ -10,42 +10,14 @@ import Step5Paiement from './registration/Step5Paiement';
 import Step6Contrat from './registration/Step6Contrat';
 import Step7Validation from './registration/Step7Validation';
 
+import { vendorService } from '../../../services/vendorService';
+import toast from 'react-hot-toast';
+
 const RegisterPage = () => {
     const [currentStep, setCurrentStep] = useState(1);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [formData, setFormData] = useState({
-        // Step 1
-        phone: '',
-        password: '',
-        confirmPassword: '',
-        otpCode: '', // New field for OTP
-        // Step 2 (Updated to Client Type/Activity)
-        clientType: '', // B2B, B2C, B2F, B2G
-        // B2B/B2G fields
-        clientNcc: '',
-        clientName: '',
-        clientPhone: '',
-        clientEmail: '',
-        // B2F specific
-        currency: '',
-        exchangeRate: '',
-        // Step 3 (Activity)
-        activityNature: '', // Artisan, Commerçant... instead of TypeActivite
-        activityDescription: '',
-        activityStartYear: '',
-        // Step 4
-        cniRecto: null,
-        cniVerso: null,
-        cniSelfie: null,
-        justificatifDomicile: null,
-        // Step 5 (Payment - moved from step 5 to 6 in logic but data remains)
-        selectedPlan: '', // instead of typeComptePaiement
-        paymentMethod: '', // instead of telPaiement
-        // Step 6 (Contract - moved to step 5 in new flow but let's keep structure flexible)
-        agreements: {
-            cgu: false,
-            confidentialite: false,
-            contratFiscal: false
-        }
+        // ...
     });
 
     const updateFormData = (newData) => {
@@ -60,13 +32,17 @@ const RegisterPage = () => {
         setCurrentStep(prev => Math.max(prev - 1, 1));
     };
 
-    const handleSubmit = () => {
-        // Handle final submission
-        console.log('Final form data:', formData);
-        // Simulate API call
-        setTimeout(() => {
+    const handleSubmit = async () => {
+        setIsSubmitting(true);
+        try {
+            await vendorService.submitKyc();
             nextStep(); // Go to validation step
-        }, 1000);
+        } catch (error) {
+            console.error('Final submission error:', error);
+            toast.error(error.response?.data?.message || "Erreur lors de la soumission finale");
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const renderStep = () => {

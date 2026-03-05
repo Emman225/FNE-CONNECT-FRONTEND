@@ -10,6 +10,7 @@ import FaqPage from '../pages/public/static/FaqPage';
 import ServicesPage from '../pages/public/static/ServicesPage';
 import ContactPage from '../pages/public/static/ContactPage';
 import PublicToolPage from '../pages/public/tools/PublicToolPage';
+import ClientPaymentPage from '../pages/public/payment/ClientPaymentPage';
 
 // Auth
 import PublicLogin from '../auth/PublicLogin';
@@ -34,6 +35,8 @@ import PaymentListPage from '../pages/shared/payments/PaymentListPage';
 import CommissionListPage from '../pages/shared/commissions/CommissionListPage';
 import PayoutListPage from '../pages/shared/payouts/PayoutListPage';
 import SettingsPage from '../pages/shared/settings/SettingsPage';
+import NotificationPage from '../pages/admin/notifications/NotificationPage';
+import ComponentsShowcase from '../pages/shared/ComponentsShowcase';
 
 // Guards & Roles
 import RequireRole from '../auth/RequireRole';
@@ -50,6 +53,9 @@ export const PublicRoutes = (
         <Route path="/faq" element={<FaqPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/tools/:type" element={<PublicToolPage />} />
+
+        {/* Payment Page - Public access with unique token */}
+        <Route path="/pay/:token" element={<ClientPaymentPage />} />
 
         {/* Auth Routes */}
         <Route path="/auth/login" element={<PublicLogin />} />
@@ -82,7 +88,10 @@ export const PublicRoutes = (
                 <Route path="payouts" element={<PayoutListPage />} />
                 {/* */}
                 <Route path="settings" element={<SettingsPage />} />
-                {/* */}
+                <Route path="notifications" element={<NotificationPage />} />
+
+                {/* Design System Showcase */}
+                <Route path="components" element={<ComponentsShowcase />} />
             </Route>
         </Route>
     </>

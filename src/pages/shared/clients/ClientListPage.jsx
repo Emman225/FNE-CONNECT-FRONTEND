@@ -1,37 +1,72 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Button from '../../../components/ui/Button';
 import ClientTable from '../../../app/shared/features/clients/ClientTable';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Loader2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useDashboardPath } from '../../../hooks/useDashboardPath';
 import { useNotifications } from '../../../context/NotificationContext';
-
+import ClientModal from '../../../app/shared/features/clients/ClientModal';
+import { clientService } from '../../../services/clientService';
+import toast from 'react-hot-toast';
 import showAlert from '../../../utils/sweetAlert';
-
-const MOCK_CLIENTS = [
-    { id: 1, name: 'Jean Doe', phone: '0708091011', email: 'jean@gmail.com', location: 'Cocody, Riviéra', type: 'Particulier', invoicesCount: 3 },
-    { id: 2, name: 'Entreprise ABC', phone: '0102030405', email: 'contact@abc.ci', location: 'Plateau, Immeuble X', type: 'Entreprise', invoicesCount: 12 },
-    { id: 3, name: 'Marc Konan', phone: '0505050505', email: '', location: 'Yopougon, Maroc', type: 'Particulier', invoicesCount: 1 },
-];
 
 const ClientListPage = () => {
     const { basePath } = useDashboardPath();
     const navigate = useNavigate();
     const { showSuccess } = useNotifications();
-    const [clients, setClients] = useState(MOCK_CLIENTS);
+    const [clients, setClients] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
 
+    // Modal state
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [selectedClientId, setSelectedClientId] = useState(null);
+    const [isViewOnly, setIsViewOnly] = useState(false);
+
+    const fetchClients = useCallback(async () => {
+        setLoading(true);
+        try {
+            const data = await clientService.getAll();
+            setClients(data.data || []); // Laravel Paginator
+        } catch (error) {
+            console.error("Failed to fetch clients", error);
+            toast.error("Erreur lors du chargement des clients");
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        fetchClients();
+    }, [fetchClients]);
+
     const filteredClients = clients.filter(client =>
-        client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        client.phone.includes(searchTerm)
+        (client.name?.toLowerCase().includes(searchTerm.toLowerCase()) || '') ||
+        (client.phone?.includes(searchTerm) || '')
     );
 
     const handleView = (client) => {
-        navigate(`${basePath}/clients/${client.id}`);
+        setSelectedClientId(client.id);
+        setIsViewOnly(true);
+        setIsModalOpen(true);
     };
 
     const handleEdit = (client) => {
-        navigate(`${basePath}/clients/edit/${client.id}`);
+        setSelectedClientId(client.id);
+        setIsViewOnly(false);
+        setIsModalOpen(true);
+    };
+
+    const handleNewClient = () => {
+        setSelectedClientId(null);
+        setIsViewOnly(false);
+        setIsModalOpen(true);
+    };
+
+    const handleClientSuccess = () => {
+        setIsModalOpen(false);
+        fetchClients();
+        showSuccess('Opération effectuée avec succès');
     };
 
     const handleDelete = async (client) => {
@@ -42,8 +77,13 @@ const ClientListPage = () => {
         );
 
         if (result.isConfirmed) {
-            setClients(clients.filter(c => c.id !== client.id));
-            showSuccess('Client supprimé avec succès');
+            try {
+                await clientService.delete(client.id);
+                setClients(clients.filter(c => c.id !== client.id));
+                showSuccess('Client supprimé avec succès');
+            } catch (error) {
+                toast.error("Erreur lors de la suppression");
+            }
         }
     };
 
@@ -54,11 +94,9 @@ const ClientListPage = () => {
                     <h1 style={{ fontSize: '1.875rem', fontWeight: '800', color: 'var(--primary)', letterSpacing: '-0.025em', marginBottom: '0.5rem' }}>Clients</h1>
                     <p className="text-muted">Gérez votre base de données clients.</p>
                 </div>
-                <Link to={`${basePath}/clients/new`}>
-                    <button className="btn btn-primary">
-                        <Plus size={20} /> Nouveau Client
-                    </button>
-                </Link>
+                <button className="btn btn-primary" onClick={handleNewClient}>
+                    <Plus size={20} /> Nouveau Client
+                </button>
             </div>
 
             {/* Search Bar */}
@@ -78,11 +116,25 @@ const ClientListPage = () => {
                 />
             </div>
 
-            <ClientTable
-                clients={filteredClients}
-                onView={handleView}
-                onEdit={handleEdit}
-                onDelete={handleDelete}
+            {loading ? (
+                <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '40vh' }}>
+                    <Loader2 className="animate-spin" size={48} color="var(--primary)" />
+                </div>
+            ) : (
+                <ClientTable
+                    clients={filteredClients}
+                    onView={handleView}
+                    onEdit={handleEdit}
+                    onDelete={handleDelete}
+                />
+            )}
+
+            <ClientModal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                clientId={selectedClientId}
+                isViewOnly={isViewOnly}
+                onSuccess={handleClientSuccess}
             />
         </div>
     );

@@ -15,12 +15,14 @@ const STATUS_COLORS = {
     // Invoice specific
     pending_commission: { bg: '#FEF3C7', color: '#D97706', label: 'Commission en attente' },
     fne_generated: { bg: '#DCFCE7', color: '#16A34A', label: 'FNE Reçu' },
-    verifying: { bg: '#E0F2FE', color: '#0369A1', label: 'Payé - En vérification' },
+    verifying: { bg: '#E0F2FE', color: '#0369A1', label: 'En vérification' },
+    waiting_verification: { bg: '#E0F2FE', color: '#0369A1', label: 'Attente Validation' },
     pending_fne: { bg: '#FEF3C7', color: '#B45309', label: 'Attente FNE' },
 
     // Payment/Commission
     completed: { bg: '#DCFCE7', color: '#16A34A', label: 'Complété' },
     failed: { bg: '#FEE2E2', color: '#DC2626', label: 'Échoué' },
+    overdue: { bg: '#FEE2E2', color: '#991B1B', label: 'En retard' },
 };
 
 const StatusBadge = ({ status, label }) => {

@@ -1,8 +1,10 @@
 import React from 'react';
 import { Building2, User, Globe, Landmark } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { vendorService } from '../../../../services/vendorService';
 
 const Step2Identite = ({ data, updateData, onNext, onBack }) => {
+    const [isLoading, setIsLoading] = React.useState(false);
 
     // Validation Logic
     const validate = () => {
@@ -12,10 +14,10 @@ const Step2Identite = ({ data, updateData, onNext, onBack }) => {
         }
 
         const requiredFields = {
-            'B2B': ['clientNcc', 'clientName', 'clientPhone', 'clientEmail'],
+            'B2B': ['clientNcc', 'clientName', 'clientPhone', 'clientEmail', 'contactName', 'contactFunction', 'contactPhone'],
             'B2C': ['clientName'],
-            'B2F': ['clientName', 'currency', 'exchangeRate'],
-            'B2G': ['clientName']
+            'B2F': ['clientName', 'currency', 'exchangeRate', 'contactName', 'contactFunction', 'contactPhone'],
+            'B2G': ['clientName', 'contactName', 'contactFunction', 'contactPhone']
         };
 
         const currentRequired = requiredFields[data.clientType] || [];
@@ -28,10 +30,26 @@ const Step2Identite = ({ data, updateData, onNext, onBack }) => {
         return true;
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (validate()) {
+        if (!validate()) return;
+
+        setIsLoading(true);
+        try {
+            await vendorService.updateProfile({
+                client_type: data.clientType,
+                business_name: data.clientName,
+                rne_number: data.clientNcc,
+                contact_name: data.contactName,
+                contact_function: data.contactFunction,
+                contact_phone: data.contactPhone
+            });
             onNext();
+        } catch (error) {
+            console.error("Failed to update profile", error);
+            toast.error("Erreur lors de la mise à jour du profil");
+        } finally {
+            setIsLoading(false);
         }
     };
 
@@ -42,7 +60,10 @@ const Step2Identite = ({ data, updateData, onNext, onBack }) => {
             clientPhone: 'Téléphone',
             clientEmail: 'Email',
             currency: 'Devise',
-            exchangeRate: 'Taux de change'
+            exchangeRate: 'Taux de change',
+            contactName: 'Nom et Prénoms (Contact)',
+            contactFunction: 'Fonction (Contact)',
+            contactPhone: 'Téléphone (Contact)'
         };
         return labels[field] || field;
     };
@@ -169,6 +190,47 @@ const Step2Identite = ({ data, updateData, onNext, onBack }) => {
                                     onChange={(e) => updateData({ clientEmail: e.target.value })}
                                 />
                             </div>
+
+                            {/* Contact Person Fields - Shown if NOT B2C */}
+                            {data.clientType !== 'B2C' && (
+                                <>
+                                    <div style={{ gridColumn: '1 / -1', marginTop: '1rem' }}>
+                                        <h4 style={{ fontSize: '0.9rem', color: 'var(--primary)', marginBottom: '1rem', borderBottom: '1px dashed var(--border-color)', paddingBottom: '0.25rem' }}>
+                                            Personne à contacter
+                                        </h4>
+                                    </div>
+                                    <div style={{ gridColumn: '1 / -1' }}>
+                                        <label className="form-label">Nom et Prénoms <span style={{ color: 'red' }}>*</span></label>
+                                        <input
+                                            type="text"
+                                            className="input-field"
+                                            placeholder="Nom complet du contact"
+                                            value={data.contactName || ''}
+                                            onChange={(e) => updateData({ contactName: e.target.value })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="form-label">Fonction <span style={{ color: 'red' }}>*</span></label>
+                                        <input
+                                            type="text"
+                                            className="input-field"
+                                            placeholder="Ex: Responsable Achats"
+                                            value={data.contactFunction || ''}
+                                            onChange={(e) => updateData({ contactFunction: e.target.value })}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="form-label">Téléphone <span style={{ color: 'red' }}>*</span></label>
+                                        <input
+                                            type="tel"
+                                            className="input-field"
+                                            placeholder="+225..."
+                                            value={data.contactPhone || ''}
+                                            onChange={(e) => updateData({ contactPhone: e.target.value })}
+                                        />
+                                    </div>
+                                </>
+                            )}
 
                             {/* B2F Specifics */}
                             {data.clientType === 'B2F' && (

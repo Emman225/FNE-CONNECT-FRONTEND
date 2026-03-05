@@ -25,7 +25,7 @@ const ClientTable = ({ clients, onView, onEdit, onDelete }) => {
                     </div>
                     <div>
                         <div style={{ fontWeight: '600', color: 'var(--text-main)', fontSize: '0.95rem' }}>{row.name}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{row.invoicesCount} factures</div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{row.invoices_count || 0} factures</div>
                     </div>
                 </div>
             )
@@ -52,7 +52,7 @@ const ClientTable = ({ clients, onView, onEdit, onDelete }) => {
             sortable: true,
             render: (row) => (
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: 'var(--text-secondary)' }}>
-                    <MapPin size={14} color="var(--text-muted)" /> {row.location}
+                    <MapPin size={14} color="var(--text-muted)" /> {row.address || row.city || '-'}
                 </div>
             )
         },
@@ -60,18 +60,22 @@ const ClientTable = ({ clients, onView, onEdit, onDelete }) => {
             key: 'type',
             label: 'Type',
             sortable: true,
-            render: (row) => (
-                <span style={{
-                    padding: '0.35rem 0.75rem',
-                    borderRadius: '20px',
-                    fontSize: '0.75rem',
-                    fontWeight: '600',
-                    backgroundColor: row.type === 'Entreprise' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(16, 185, 129, 0.1)',
-                    color: row.type === 'Entreprise' ? 'var(--secondary)' : 'var(--success)'
-                }}>
-                    {row.type}
-                </span>
-            )
+            render: (row) => {
+                const typeLabel = row.type === 'B2B' ? 'Entreprise' : 'Particulier';
+                const isB2B = row.type === 'B2B';
+                return (
+                    <span style={{
+                        padding: '0.35rem 0.75rem',
+                        borderRadius: '20px',
+                        fontSize: '0.75rem',
+                        fontWeight: '600',
+                        backgroundColor: isB2B ? 'rgba(59, 130, 246, 0.1)' : 'rgba(16, 185, 129, 0.1)',
+                        color: isB2B ? 'var(--secondary)' : 'var(--success)'
+                    }}>
+                        {typeLabel}
+                    </span>
+                );
+            }
         }
     ];
 

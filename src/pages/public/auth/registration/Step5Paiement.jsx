@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { CreditCard, Check, Smartphone } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { vendorService } from '../../../../services/vendorService';
 
 const Step5Paiement = ({ data, updateData, onSubmit, onBack }) => {
-    // Component logic remains similar, but using onSubmit instead of onNext
+    const [isLoading, setIsLoading] = React.useState(false);
     const [selectedPlan, setSelectedPlan] = useState(data.subscriptionPlan || '');
     const [paymentMethod, setPaymentMethod] = useState(data.paymentMethod || '');
     const [paymentPhone, setPaymentPhone] = useState(data.paymentPhone || '');
@@ -39,7 +40,7 @@ const Step5Paiement = ({ data, updateData, onSubmit, onBack }) => {
         }
     ];
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (!paymentPhone || paymentPhone.length < 10) {
@@ -47,12 +48,24 @@ const Step5Paiement = ({ data, updateData, onSubmit, onBack }) => {
             return;
         }
 
-        updateData({
-            subscriptionPlan: selectedPlan,
-            paymentMethod: paymentMethod,
-            paymentPhone: paymentPhone
-        });
-        onSubmit(); // Call the final submit function
+        setIsLoading(true);
+        try {
+            await vendorService.updateProfile({
+                selected_plan: selectedPlan,
+                payment_method: `${paymentMethod} (${paymentPhone})`
+            });
+            updateData({
+                subscriptionPlan: selectedPlan,
+                paymentMethod: paymentMethod,
+                paymentPhone: paymentPhone
+            });
+            onSubmit();
+        } catch (error) {
+            console.error("Failed to update payment info", error);
+            toast.error("Erreur lors de la validation du paiement");
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (

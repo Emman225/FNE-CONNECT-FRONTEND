@@ -30,16 +30,14 @@ const CURRENCY_OPTIONS = [
     { value: 'NGN', label: 'NGN - Naira', description: 'Nigeria' }
 ];
 
-const MOCK_CLIENTS = [
-    { id: 1, name: 'Jean Doe', phone: '0708091011', email: 'jean@gmail.com', address: 'Cocody, Riviéra', type: 'B2C', ncc: '', taxRegime: 'Particulier' },
-    { id: 2, name: 'Entreprise ABC', phone: '0102030405', email: 'contact@abc.ci', address: 'Plateau, Immeuble X', type: 'B2B', ncc: 'A1234567Z', taxRegime: 'Le régime réel normal d’imposition' },
-    { id: 3, name: 'Marc Konan', phone: '0505050505', email: '', address: 'Yopougon, Maroc', type: 'B2C', ncc: '', taxRegime: 'Particulier' },
-];
+import { clientService } from '../../../../services/clientService';
+import toast from 'react-hot-toast';
 
-const ClientForm = ({ clientId, isViewOnly = false }) => {
+const ClientForm = ({ clientId, isViewOnly = false, onSuccess, onCancel }) => {
     const navigate = useNavigate();
     const { basePath } = useDashboardPath();
     const isEditMode = !!clientId;
+    const [loading, setLoading] = useState(false);
 
     // State mirroring InvoiceForm structure for client info
     const [formData, setFormData] = useState({
@@ -59,23 +57,32 @@ const ClientForm = ({ clientId, isViewOnly = false }) => {
 
     useEffect(() => {
         if (clientId) {
-            const client = MOCK_CLIENTS.find(c => c.id === parseInt(clientId));
-            if (client) {
-                setFormData({
-                    billingType: client.type,
-                    clientInfo: {
-                        clientName: client.name,
-                        phone: client.phone,
-                        email: client.email,
-                        ncc: client.ncc,
-                        currency: 'XAF',
-                        exchangeRate: 1,
-                        additionalNotes: '',
-                        address: client.address,
-                        taxRegime: client.taxRegime
-                    }
-                });
-            }
+            const fetchClient = async () => {
+                try {
+                    setLoading(true);
+                    const client = await clientService.getById(clientId);
+                    setFormData({
+                        billingType: client.type || BillingType.B2B,
+                        clientInfo: {
+                            clientName: client.name || '',
+                            phone: client.phone || '',
+                            email: client.email || '',
+                            ncc: client.ncc || '',
+                            currency: client.currency || 'XAF',
+                            exchangeRate: client.exchange_rate || 1,
+                            additionalNotes: client.notes || '',
+                            address: client.address || '',
+                            taxRegime: client.tax_regime || ''
+                        }
+                    });
+                } catch (error) {
+                    console.error("Failed to fetch client", error);
+                    toast.error("Erreur lors du chargement des détails du client");
+                } finally {
+                    setLoading(false);
+                }
+            };
+            fetchClient();
         }
     }, [clientId]);
 
@@ -118,20 +125,44 @@ const ClientForm = ({ clientId, isViewOnly = false }) => {
         e.preventDefault();
         if (isViewOnly) return;
 
-        // Logic to save
-        const clientData = {
-            ...formData,
-            id: 'CL-' + Math.random().toString(36).substr(2, 9).toUpperCase(),
-            created_at: new Date().toISOString()
-        };
-        console.log('Submitting client:', clientData);
+        setLoading(true);
+        try {
+            const clientPayload = {
+                name: formData.clientInfo.clientName,
+                phone: formData.clientInfo.phone,
+                email: formData.clientInfo.email,
+                address: formData.clientInfo.address,
+                type: formData.billingType,
+                ncc: formData.clientInfo.ncc,
+                tax_regime: formData.clientInfo.taxRegime,
+                currency: formData.clientInfo.currency,
+                exchange_rate: formData.clientInfo.exchangeRate,
+                notes: formData.clientInfo.additionalNotes
+            };
 
-        await showAlert.success(
-            isEditMode ? 'Client Modifié' : 'Client Ajouté',
-            isEditMode ? 'Les informations du client ont été mises à jour.' : 'Le nouveau client a été enregistré avec succès.'
-        );
+            let response;
+            if (isEditMode) {
+                response = await clientService.update(clientId, clientPayload);
+            } else {
+                response = await clientService.create(clientPayload);
+            }
 
-        navigate(`${basePath}/clients`);
+            await showAlert.success(
+                isEditMode ? 'Client Modifié' : 'Client Ajouté',
+                isEditMode ? 'Les informations du client ont été mises à jour.' : 'Le nouveau client a été enregistré avec succès.'
+            );
+
+            if (onSuccess) {
+                onSuccess(response);
+            } else {
+                navigate(`${basePath}/clients`);
+            }
+        } catch (error) {
+            console.error("Failed to save client", error);
+            toast.error(error.response?.data?.message || "Erreur lors de l'enregistrement");
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -398,12 +429,17 @@ const ClientForm = ({ clientId, isViewOnly = false }) => {
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
-                    <button type="button" className="btn btn-light" onClick={() => navigate(`${basePath}/clients`)} style={{ border: '1px solid var(--border-color)' }}>
+                    <button
+                        type="button"
+                        className="btn btn-light"
+                        onClick={() => onCancel ? onCancel() : navigate(`${basePath}/clients`)}
+                        style={{ border: '1px solid var(--border-color)' }}
+                    >
                         {isViewOnly ? 'Fermer' : 'Annuler'}
                     </button>
                     {!isViewOnly && (
-                        <button type="submit" className="btn btn-primary">
-                            <Save size={18} /> {isEditMode ? 'Enregistrer les modifications' : 'Enregistrer le client'}
+                        <button type="submit" className="btn btn-primary" disabled={loading}>
+                            {loading ? 'Enregistrement...' : <><Save size={18} /> {isEditMode ? 'Enregistrer les modifications' : 'Enregistrer le client'}</>}
                         </button>
                     )}
                 </div>

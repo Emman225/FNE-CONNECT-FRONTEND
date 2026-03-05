@@ -1,0 +1,154 @@
+.input-wrapper {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+}
+
+.input-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+}
+
+/* Base input styles matching .input-field but with accommodations for icons */
+.input-field-custom {
+    width: 100%;
+    padding: 0.75rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    background-color: var(--bg-card);
+    color: var(--text-primary);
+    transition: all var(--transition-normal);
+    font-size: 0.9375rem;
+    font-family: inherit;
+    appearance: none;
+}
+
+.input-field-custom:hover {
+    border-color: var(--text-secondary);
+}
+
+.input-field-custom:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px var(--primary-lighter);
+}
+
+.input-field-custom:disabled {
+    background-color: #f1f5f9;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.input-field-error {
+    border-color: var(--danger);
+}
+
+.input-field-error:focus {
+    border-color: var(--danger);
+    box-shadow: 0 0 0 3px var(--danger-light);
+}
+
+.input-field-success {
+    border-color: var(--success);
+}
+
+.input-field-success:focus {
+    border-color: var(--success);
+    box-shadow: 0 0 0 3px var(--success-light);
+}
+
+/* Icon positioning */
+.input-prefix-icon {
+    position: absolute;
+    left: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.input-suffix-icon {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10;
+}
+
+.input-with-prefix {
+    padding-left: 2.5rem;
+}
+
+.input-with-suffix {
+    padding-right: 2.5rem;
+}
+
+/* Sizes */
+.input-sm {
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8125rem;
+}
+
+.input-md {
+    padding: 0.75rem 1rem;
+    font-size: 0.9375rem;
+}
+
+.input-lg {
+    padding: 1rem 1.25rem;
+    font-size: 1rem;
+}
+
+/* Label */
+.input-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--text-primary);
+    font-size: 0.9375rem;
+}
+
+.input-label-error {
+    color: var(--danger);
+}
+
+.input-helper-text {
+    margin-top: 0.375rem;
+    font-size: 0.8125rem;
+    color: var(--text-secondary);
+}
+
+.input-error-text {
+    color: var(--danger);
+}
+
+.input-success-text {
+    color: var(--success);
+}
+
+/* Password toggle button */
+.input-password-toggle {
+    background: none;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color var(--transition-fast);
+}
+
+.input-password-toggle:hover {
+    color: var(--text-primary);
+}

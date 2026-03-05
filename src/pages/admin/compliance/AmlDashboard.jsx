@@ -264,6 +264,15 @@ const AmlDashboard = () => {
                                     {row.status === 'pending' ? 'En attente' : 'Traité'}
                                 </span>
                             )
+                        },
+                        {
+                            key: 'reviewedBy',
+                            label: 'Agent opérateur',
+                            render: (row) => (
+                                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                    {row.reviewedBy || row.reviewer?.name || '-'}
+                                </span>
+                            )
                         }
                     ]}
                     data={alerts}

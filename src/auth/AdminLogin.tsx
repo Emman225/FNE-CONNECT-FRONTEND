@@ -6,16 +6,28 @@ import { useAuth } from './AuthProvider';
 import { userRoles, isAdminRole } from '../types/roles';
 
 const AdminLogin = () => {
-    const { login } = useAuth();
+    const { user, login } = useAuth();
     const navigate = useNavigate();
+
+    // Redirection if already logged in
+    React.useEffect(() => {
+        if (user) {
+            if (isAdminRole(user.role)) {
+                navigate('/admin/dashboard');
+            } else if (user.role === userRoles.VENDOR) {
+                navigate('/dashboard');
+            }
+        }
+    }, [user, navigate]);
+
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
-
-    // Mock "Remember Me" state
     const [rememberMe, setRememberMe] = useState(false);
+
+    if (user) return null;
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();

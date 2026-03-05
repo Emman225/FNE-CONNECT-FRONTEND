@@ -55,8 +55,12 @@ const DocumentTable = ({ documents, type = 'invoice', onPay, onGenerateFne, onUp
             label: 'Client',
             render: (row) => (
                 <div>
-                    <div style={{ fontWeight: '600', color: 'var(--text-main)', fontSize: '0.9rem' }}>{row.clientName}</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{row.clientPhone}</div>
+                    <div style={{ fontWeight: '600', color: 'var(--text-main)', fontSize: '0.9rem' }}>
+                        {row.client?.name || row.clientName}
+                    </div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                        {row.client?.phone || row.clientPhone}
+                    </div>
                 </div>
             )
         },
@@ -64,13 +68,16 @@ const DocumentTable = ({ documents, type = 'invoice', onPay, onGenerateFne, onUp
             key: 'date',
             label: 'Date',
             sortable: true,
-            render: (row) => <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>{row.date}</span>
+            render: (row) => <span style={{ color: 'var(--text-secondary)', fontSize: '0.875rem' }}>{row.issue_date || row.date}</span>
         },
         {
             key: 'amount',
             label: 'Montant TTC',
             sortable: true,
-            render: (row) => <span style={{ fontWeight: '700', color: 'var(--text-main)', fontSize: '0.95rem' }}>{row.amount.toLocaleString('fr-FR')} FCFA</span>
+            render: (row) => {
+                const amount = row.total_ttc || row.amount || 0;
+                return <span style={{ fontWeight: '700', color: 'var(--text-main)', fontSize: '0.95rem' }}>{Number(amount).toLocaleString('fr-FR')} FCFA</span>;
+            }
         },
         {
             key: 'status',
@@ -122,9 +129,9 @@ const DocumentTable = ({ documents, type = 'invoice', onPay, onGenerateFne, onUp
                         </button>
                     )}
 
-                    {['draft', 'pending'].includes(row.status) && (
+                    {['draft', 'pending', 'sent'].includes(row.status) && (
                         <>
-                            {((row.status === 'pending') || (row.status === 'draft' && row.isComplete)) && onPay && (
+                            {((row.status === 'pending' || row.status === 'sent') || (row.status === 'draft' && row.isComplete)) && onPay && (
                                 <button onClick={() => onPay(row)} className="btn-icon" style={{
                                     color: 'var(--success)',
                                     background: 'transparent',

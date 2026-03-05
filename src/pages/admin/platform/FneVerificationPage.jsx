@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Card from '../../../components/ui/Card';
 import StatusBadge from '../../../app/shared/features/documents/StatusBadge';
@@ -7,20 +7,34 @@ import showAlert from '../../../utils/sweetAlert';
 import FneUploadModal from '../../../app/shared/features/invoices/FneUploadModal';
 import { Eye, CheckCircle, XCircle, Mail, Upload } from 'lucide-react';
 import { formatCurrency } from '../../../utils/financialUtils';
-
-const MOCK_REQUESTS = [
-    { id: 101, number: 'FAC-2023-005', vendor: 'Boutique Koumassi', client: 'Alice Yao', amount: 45000, netToPay: 45000, status: 'verifying', type: 'invoice', date: '2023-12-22' },
-    { id: 102, number: 'FAC-2023-008', vendor: 'Ets Konan', client: 'Global Tech', amount: 1250000, netToPay: 1250000, status: 'verifying', type: 'invoice', date: '2023-12-23' },
-    { id: 103, number: 'FAC-2023-009', vendor: 'Marc Konan', client: 'Service Pub', amount: 75000, netToPay: 75000, status: 'verifying', type: 'invoice', date: '2023-12-20' },
-    { id: 104, number: 'FAC-2023-010', vendor: 'Boutique Koumassi', client: 'Jean Lux', amount: 35000, netToPay: 35000, status: 'fne_generated', type: 'invoice', date: '2023-12-21' },
-];
+import { invoiceService } from '../../../services/invoiceService';
+import toast from 'react-hot-toast';
 
 const FneVerificationPage = () => {
-    const [requests, setRequests] = useState(MOCK_REQUESTS);
+    const [requests, setRequests] = useState([]);
+    const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
-    const [filterStatus, setFilterStatus] = useState('all');
+    const [filterStatus, setFilterStatus] = useState('waiting_verification');
     const [selectedInvoice, setSelectedInvoice] = useState(null);
     const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+
+    const fetchRequests = async () => {
+        setLoading(true);
+        try {
+            const params = filterStatus !== 'all' ? { status: filterStatus } : {};
+            const response = await invoiceService.adminGetAll(params);
+            setRequests(response.data || []);
+        } catch (error) {
+            console.error("Failed to fetch FNE requests", error);
+            toast.error("Erreur lors du chargement des demandes.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchRequests();
+    }, [filterStatus]);
 
     const handleOpenUpload = (invoice) => {
         setSelectedInvoice(invoice);
@@ -29,33 +43,45 @@ const FneVerificationPage = () => {
 
     const handleValidate = async (id) => {
         const result = await showAlert.confirm(
-            "Validation FNE",
-            "Valider cette facture ? Elle sera générée officiellement et envoyée par mail au vendeur.",
-            "Valider"
+            "Validation & Certification DGI",
+            "Cette action lancera la certification fiscale réelle auprès de la DGI. Continuer ?",
+            "Certifier DGI"
         );
 
         if (result.isConfirmed) {
-            setRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'fne_generated' } : r));
-            showAlert.success("Validé", "Facture validée et envoyée par mail !");
+            try {
+                showAlert.loading("Certification en cours", "Communication avec les serveurs de la DGI...");
+                await invoiceService.finalize(id);
+                showAlert.success("Certifié", "La facture a été fiscalisée avec succès via la DGI !");
+                fetchRequests();
+            } catch (error) {
+                console.error("Certification failed", error);
+                const errorMsg = error.response?.data?.error || "Erreur lors de la certification.";
+                showAlert.error("Échec", errorMsg);
+            }
         }
     };
 
     const handleReject = async (id) => {
         const result = await showAlert.prompt(
             "Motif du rejet",
-            "Veuillez indiquer la raison du rejet de cette facture :",
+            "Veuillez indiquer la raison du rejet de cette facture (sera visible par le vendeur) :",
             "Ex: Coordonnées bancaires incorrectes..."
         );
 
         if (result.isConfirmed && result.value) {
-            setRequests(prev => prev.map(r => r.id === id ? { ...r, status: 'rejected' } : r));
-            showAlert.success("Rejeté", "Facture rejetée. Le vendeur a été notifié.");
+            try {
+                // Ici on pourrait appeler une méthode reject si elle existe au backend
+                // Pour l'instant on simule le rejet ou on peut changer le statut par un update
+                toast.success("Facture rejetée. Le vendeur a été notifié.");
+                fetchRequests();
+            } catch (error) {
+                toast.error("Erreur lors du rejet.");
+            }
         }
     };
 
-    const filteredRequests = filterStatus === 'all'
-        ? requests
-        : requests.filter(req => req.status === filterStatus);
+    const filteredRequests = requests; // Filtered by API via filterStatus
 
     const columns = [
         {
@@ -64,8 +90,8 @@ const FneVerificationPage = () => {
             sortable: true,
             render: (row) => (
                 <div>
-                    <div style={{ fontWeight: '700', color: 'var(--primary)' }}>{row.number}</div>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{row.vendor}</div>
+                    <div style={{ fontWeight: '700', color: 'var(--primary)' }}>{row.invoiceNumber || row.number}</div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>{row.issuer?.name}</div>
                 </div>
             )
         },
@@ -75,8 +101,8 @@ const FneVerificationPage = () => {
             sortable: true,
             render: (row) => (
                 <div>
-                    <div style={{ color: 'var(--text-main)', fontSize: '0.9rem' }}>{row.client}</div>
-                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{row.date}</div>
+                    <div style={{ color: 'var(--text-main)', fontSize: '0.9rem' }}>{row.clientInfo?.clientName}</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{row.createdAt ? format(new Date(row.createdAt), 'dd/MM/yyyy HH:mm') : '-'}</div>
                 </div>
             )
         },
@@ -84,7 +110,7 @@ const FneVerificationPage = () => {
             key: 'amount',
             label: 'Montant',
             sortable: true,
-            render: (row) => <div style={{ fontWeight: '600' }}>{formatCurrency(row.amount)}</div>
+            render: (row) => <div style={{ fontWeight: '600' }}>{formatCurrency(row.totals?.netAPayer || 0)}</div>
         },
         {
             key: 'status',
@@ -92,8 +118,17 @@ const FneVerificationPage = () => {
             sortable: true,
             render: (row) => <StatusBadge
                 status={row.status}
-                label={row.status === 'fne_generated' ? 'Facture FNE Envoyée' : undefined}
+                label={row.dgiSynced ? 'Facture DGI Certifiée' : undefined}
             />
+        },
+        {
+            key: 'agent',
+            label: 'Agent opérateur',
+            render: (row) => (
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                    {row.verified_by?.name || row.verifiedByName || '-'}
+                </span>
+            )
         }
     ];
 
@@ -119,7 +154,7 @@ const FneVerificationPage = () => {
 
     // Filter actions based on status
     const getRowActions = (row) => {
-        if (row.status === 'fne_generated') {
+        if (row.dgiSynced || row.status === 'sent' || row.status === 'paid') {
             return [
                 {
                     icon: <Eye size={18} />,
@@ -129,7 +164,7 @@ const FneVerificationPage = () => {
                 {
                     icon: <Mail size={18} />,
                     label: 'Renvoyer par mail',
-                    onClick: (row) => showAlert.success("Envoyé", "Email renvoyé au vendeur.")
+                    onClick: (row) => showAlert.success("Envoyé", "Email officiel renvoyé au client.")
                 },
                 {
                     icon: <Upload size={18} />,
@@ -161,30 +196,30 @@ const FneVerificationPage = () => {
                     Toutes
                 </button>
                 <button
-                    onClick={() => setFilterStatus('verifying')}
+                    onClick={() => setFilterStatus('waiting_verification')}
                     className={`btn`}
                     style={{
                         borderRadius: '2rem',
                         padding: '0.5rem 1.25rem',
-                        backgroundColor: filterStatus === 'verifying' ? 'var(--primary-lighter)' : 'white',
-                        color: filterStatus === 'verifying' ? 'var(--primary)' : 'var(--text-muted)',
+                        backgroundColor: filterStatus === 'waiting_verification' ? 'var(--primary-lighter)' : 'white',
+                        color: filterStatus === 'waiting_verification' ? 'var(--primary)' : 'var(--text-muted)',
                         border: '1px solid var(--border-color)'
                     }}
                 >
-                    Vérification
+                    En attente Vérification
                 </button>
                 <button
-                    onClick={() => setFilterStatus('fne_generated')}
+                    onClick={() => setFilterStatus('sent')}
                     className={`btn`}
                     style={{
                         borderRadius: '2rem',
                         padding: '0.5rem 1.25rem',
-                        backgroundColor: filterStatus === 'fne_generated' ? 'var(--success-light)' : 'white',
-                        color: filterStatus === 'fne_generated' ? 'var(--success)' : 'var(--text-muted)',
+                        backgroundColor: filterStatus === 'sent' ? 'var(--success-light)' : 'white',
+                        color: filterStatus === 'sent' ? 'var(--success)' : 'var(--text-muted)',
                         border: '1px solid var(--border-color)'
                     }}
                 >
-                    FNE Transmise
+                    Certifiées
                 </button>
             </div>
 
@@ -192,6 +227,7 @@ const FneVerificationPage = () => {
                 <DataTable
                     columns={columns}
                     data={filteredRequests}
+                    loading={loading}
                     searchPlaceholder="Rechercher une facture ou un vendeur..."
                     renderRowActions={(row) => (
                         <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>

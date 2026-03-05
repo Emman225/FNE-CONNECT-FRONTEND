@@ -1,33 +1,48 @@
 import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { useDashboardPath } from '../../../hooks/useDashboardPath';
 import Card from '../../../components/ui/Card';
 import Button from '../../../components/ui/Button';
 import DocumentTable from '../../../app/shared/features/documents/DocumentTable';
 import PaymentModal from '../../../app/shared/features/payments/PaymentModal';
-import { Plus } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useDashboardPath } from '../../../hooks/useDashboardPath';
+import { invoiceService } from '../../../services/invoiceService';
+import toast from 'react-hot-toast';
+import { Plus, Loader2 } from 'lucide-react';
 import { useNotifications } from '../../../context/NotificationContext';
-
 import showAlert from '../../../utils/sweetAlert';
-
-const MOCK_QUOTES = [
-    { id: 1, accountNumber: 'FNE-25897221', number: 'DEV-2023-001', clientName: 'Jean Doe', clientPhone: '0708091011', date: '2023-12-15', amount: 150000, status: 'draft', isComplete: true },
-    { id: 2, accountNumber: 'FNE-25897222', number: 'DEV-2023-002', clientName: 'Entreprise ABC', clientPhone: '0102030405', date: '2023-12-16', amount: 2500000, status: 'pending', isComplete: true },
-    { id: 3, accountNumber: 'FNE-25897223', number: 'DEV-2023-003', clientName: 'Lamine Touré', clientPhone: '0505443322', date: '2023-12-18', amount: 85000, status: 'draft', isComplete: false },
-];
 
 const QuoteListPage = () => {
     const { basePath } = useDashboardPath();
-    const { showSuccess } = useNotifications();
-    const [quotes, setQuotes] = useState(MOCK_QUOTES);
+    const { showSuccess, showError } = useNotifications();
+    const [quotes, setQuotes] = React.useState([]);
+    const [loading, setLoading] = React.useState(true);
     const [filterStatus, setFilterStatus] = useState('all');
     const [selectedQuote, setSelectedQuote] = useState(null);
     const [isPaymentOpen, setIsPaymentOpen] = useState(false);
     const navigate = useNavigate();
 
-    const filteredQuotes = filterStatus === 'all'
-        ? quotes
-        : quotes.filter(q => q.status === filterStatus);
+    const fetchQuotes = React.useCallback(async () => {
+        setLoading(true);
+        try {
+            const params = { type: 'QUOTE' };
+            if (filterStatus !== 'all') {
+                params.status = filterStatus;
+            }
+            const response = await invoiceService.getAll(params);
+            setQuotes(response.data || []);
+        } catch (error) {
+            console.error("Failed to fetch quotes", error);
+            showError("Erreur lors du chargement des devis");
+        } finally {
+            setLoading(false);
+        }
+    }, [filterStatus]);
+
+    React.useEffect(() => {
+        fetchQuotes();
+    }, [fetchQuotes]);
+
+    const filteredQuotes = quotes;
 
     const handlePay = (quote) => {
         setSelectedQuote(quote);
@@ -38,24 +53,34 @@ const QuoteListPage = () => {
         if (toType === 'proforma') {
             const result = await showAlert.confirm(
                 'Conversion en Proforma',
-                `Voulez-vous convertir le devis ${quote.number} en Proforma ?`,
+                `Voulez-vous convertir le devis ${quote.invoiceNumber || quote.id} en Proforma ?`,
                 'Convertir'
             );
 
             if (result.isConfirmed) {
-                showSuccess(`Devis ${quote.number} converti en Proforma avec succès !`);
-                navigate(`${basePath}/proformas`);
+                try {
+                    await invoiceService.convertToInvoice(quote.id, 'PROFORMA');
+                    showSuccess(`Devis converti en Proforma avec succès !`);
+                    navigate(`${basePath}/proformas`);
+                } catch (error) {
+                    toast.error("Erreur lors de la conversion");
+                }
             }
         } else if (toType === 'invoice') {
             const result = await showAlert.confirm(
                 'Conversion en Facture',
-                `Voulez-vous convertir le devis ${quote.number} en Facture ?`,
+                `Voulez-vous convertir le devis ${quote.invoiceNumber || quote.id} en Facture ?`,
                 'Convertir'
             );
 
             if (result.isConfirmed) {
-                showSuccess(`Devis ${quote.number} converti en Facture avec succès !`);
-                navigate(`${basePath}/invoices`);
+                try {
+                    await invoiceService.convertToInvoice(quote.id);
+                    showSuccess(`Devis converti en Facture avec succès !`);
+                    navigate(`${basePath}/invoices`);
+                } catch (error) {
+                    toast.error("Erreur lors de la conversion");
+                }
             }
         }
     };
@@ -72,8 +97,13 @@ const QuoteListPage = () => {
         );
 
         if (result.isConfirmed) {
-            setQuotes(quotes.filter(q => q.id !== quote.id));
-            showSuccess('Devis supprimé avec succès');
+            try {
+                await invoiceService.delete(quote.id);
+                setQuotes(quotes.filter(q => q.id !== quote.id));
+                showSuccess('Devis supprimé avec succès');
+            } catch (error) {
+                toast.error("Erreur lors de la suppression");
+            }
         }
     };
 

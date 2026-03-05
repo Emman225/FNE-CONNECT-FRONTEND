@@ -44,14 +44,14 @@ export const showAlert = {
             }
         });
     },
-    confirm: (title, text, confirmText = 'Confirmer', cancelText = 'Annuler') => {
+    confirm: (title, text, confirmText = 'Confirmer', cancelText = 'Annuler', isDanger = true) => {
         return MySwal.fire({
             title: title || 'Êtes-vous sûr ?',
             text: text,
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: 'var(--primary)',
-            cancelButtonColor: 'var(--danger)',
+            confirmButtonColor: isDanger ? 'var(--danger)' : 'var(--primary)',
+            cancelButtonColor: isDanger ? '#6c757d' : 'var(--danger)',
             confirmButtonText: confirmText,
             cancelButtonText: cancelText,
             reverseButtons: true,

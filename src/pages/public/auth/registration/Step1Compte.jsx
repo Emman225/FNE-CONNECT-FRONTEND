@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { authService } from '../../../../services/authService';
 
 const Step1Compte = ({ data, updateData, onNext }) => {
     const [showPassword, setShowPassword] = useState(false);
@@ -8,7 +9,7 @@ const Step1Compte = ({ data, updateData, onNext }) => {
     const [otpSent, setOtpSent] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleSendOTP = () => {
+    const handleSendOTP = async () => {
         if (!data.phone || !data.password || !data.confirmPassword) {
             toast.error('Veuillez remplir tous les champs avant de demander le code OTP.');
             return;
@@ -19,26 +20,49 @@ const Step1Compte = ({ data, updateData, onNext }) => {
         }
 
         setIsLoading(true);
-        // Simulate API call
-        setTimeout(() => {
-            setIsLoading(false);
+        try {
+            await authService.register({
+                phone: data.phone,
+                password: data.password,
+                password_confirmation: data.confirmPassword,
+                name: data.phone, // Nom provisoire
+                role: 'vendor'
+            });
             setOtpSent(true);
             toast.success('Code OTP envoyé au ' + data.phone);
-        }, 1000);
+        } catch (error) {
+            console.error("Failed to send OTP", error);
+            toast.error(error.response?.data?.error || 'Erreur lors de l\'envoi de l\'OTP');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
-    const handleVerifyOTP = (e) => {
+    const handleVerifyOTP = async (e) => {
         e.preventDefault();
         if (!data.otpCode) {
             toast.error('Veuillez entrer le code OTP.');
             return;
         }
         setIsLoading(true);
-        // Simulate OTP verification
-        setTimeout(() => {
-            setIsLoading(false);
+        try {
+            const response = await authService.verifyOtp(data.phone, data.otpCode);
+            // Stocker temporairement les infos d'auth pour les étapes suivantes
+            const authenticatedUser = {
+                id: response.user.id,
+                name: response.user.name,
+                email: response.user.email,
+                role: response.user.role,
+                token: response.access_token
+            };
+            localStorage.setItem('fne_user', JSON.stringify(authenticatedUser));
             onNext();
-        }, 1000);
+        } catch (error) {
+            console.error("OTP Verification failed", error);
+            toast.error('Code OTP invalide');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (

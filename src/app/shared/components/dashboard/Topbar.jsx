@@ -4,6 +4,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 
 import { roleLabels, userRoles, isAdminRole } from '../../../../types/roles';
 import { useAuth } from '../../../../auth/AuthProvider';
+import ThemeToggle from '../../../../components/ui/ThemeToggle';
 
 const Topbar = () => {
     const { user, logout } = useAuth();
@@ -16,6 +17,7 @@ const Topbar = () => {
     const isAdminArea = location.pathname.startsWith('/admin');
     const basePath = isAdminArea ? '/admin/dashboard' : '/dashboard';
     const profilePath = isAdminArea ? '/admin/dashboard/profile' : '/dashboard/settings';
+    const notificationPath = isAdminArea ? '/admin/dashboard/notifications' : '/dashboard/notifications';
 
     // Get role label or fallback
     const userRoleLabel = user?.role ? roleLabels[user.role] : 'Utilisateur';
@@ -55,16 +57,17 @@ const Topbar = () => {
     return (
         <header style={{
             height: '80px',
-            backgroundColor: 'rgba(255, 255, 255, 0.9)',
+            backgroundColor: 'var(--color-surface)',
             backdropFilter: 'blur(10px)',
-            borderBottom: '1px solid var(--border-color)',
+            borderBottom: '1px solid var(--color-border)',
             display: 'flex',
             alignItems: 'center',
             padding: '0 2.5rem',
             position: 'sticky',
             top: 0,
             zIndex: 40,
-            transition: 'all var(--transition-normal)'
+            transition: 'all var(--transition-base)',
+            boxShadow: 'var(--shadow-sm)'
         }}>
             <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
                 <div style={{ position: 'relative', width: '380px' }} className="fade-in">
@@ -86,21 +89,22 @@ const Topbar = () => {
                             paddingLeft: '3rem',
                             paddingRight: '1rem',
                             height: '46px',
-                            backgroundColor: 'var(--bg-main)',
+                            backgroundColor: 'var(--color-background-secondary)',
                             border: '1px solid transparent',
                             fontSize: '0.9375rem',
                             borderRadius: 'var(--radius-xl)',
-                            transition: 'all var(--transition-normal)',
+                            transition: 'all var(--transition-base)',
                             width: '100%',
-                            boxShadow: 'none'
+                            boxShadow: 'none',
+                            color: 'var(--color-text-primary)'
                         }}
                         onFocus={(e) => {
-                            e.target.style.backgroundColor = 'white';
-                            e.target.style.borderColor = 'var(--primary)';
-                            e.target.style.boxShadow = '0 0 0 4px var(--primary-lighter)';
+                            e.target.style.backgroundColor = 'var(--color-surface)';
+                            e.target.style.borderColor = 'var(--color-primary)';
+                            e.target.style.boxShadow = '0 0 0 4px var(--color-primary-100)';
                         }}
                         onBlur={(e) => {
-                            e.target.style.backgroundColor = 'var(--bg-main)';
+                            e.target.style.backgroundColor = 'var(--color-background-secondary)';
                             e.target.style.borderColor = 'transparent';
                             e.target.style.boxShadow = 'none';
                         }}
@@ -111,6 +115,7 @@ const Topbar = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '2rem' }}>
                 {/* Notifications */}
                 <button
+                    onClick={() => navigate(notificationPath)}
                     style={{
                         background: 'transparent',
                         border: '1px solid var(--border-color)', // Default border
@@ -151,6 +156,9 @@ const Topbar = () => {
                         boxShadow: '0 2px 4px rgba(239, 68, 68, 0.3)'
                     }}></span>
                 </button>
+
+                {/* Theme Toggle */}
+                <ThemeToggle variant="icon" size="md" />
 
                 <div style={{ height: '32px', width: '1px', backgroundColor: 'var(--border-color)' }}></div>
 
@@ -242,10 +250,10 @@ const Topbar = () => {
                             top: 'calc(100% + 1rem)',
                             right: 0,
                             width: '240px',
-                            backgroundColor: 'white',
+                            backgroundColor: 'var(--color-surface)',
                             borderRadius: 'var(--radius-lg)',
                             boxShadow: 'var(--shadow-xl)',
-                            border: '1px solid var(--border-color)',
+                            border: '1px solid var(--color-border)',
                             padding: '0.5rem',
                             overflow: 'hidden',
                             zIndex: 100

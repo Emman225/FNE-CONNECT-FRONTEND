@@ -1,8 +1,10 @@
 import React, { useRef, useState } from 'react';
 import { Upload, FileText, X, Image as ImageIcon, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { vendorService } from '../../../../services/vendorService';
 
 const Step4Documents = ({ data, updateData, onNext, onBack }) => {
+    const [isLoading, setIsLoading] = useState(false);
     const cniRectoRef = useRef(null);
     const cniVersoRef = useRef(null);
     const cniSelfieRef = useRef(null);
@@ -27,7 +29,7 @@ const Step4Documents = ({ data, updateData, onNext, onBack }) => {
         }
 
         updateData({ [field]: file });
-        toast.success('Document ajouté avec succès !');
+        toast.success('Document ajouté localement !');
     };
 
     const handleRemoveFile = (field) => {
@@ -42,10 +44,28 @@ const Step4Documents = ({ data, updateData, onNext, onBack }) => {
         return true;
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        if (validate()) {
+        if (!validate()) return;
+
+        setIsLoading(true);
+        try {
+            // Upload documents one by one
+            toast.loading('Téléchargement des documents...', { id: 'kyc-upload' });
+
+            await vendorService.uploadKycDocument('ID_CARD_RECTO', data.cniRecto);
+            await vendorService.uploadKycDocument('ID_CARD_VERSO', data.cniVerso);
+            await vendorService.uploadKycDocument('ID_CARD_SELFIE', data.cniSelfie);
+            await vendorService.uploadKycDocument('ADDRESS_PROOF', data.justificatifDomicile);
+
+
+            toast.success('Documents soumis avec succès', { id: 'kyc-upload' });
             onNext();
+        } catch (error) {
+            console.error("KYC Upload failed", error);
+            toast.error("Erreur lors de l'envoi des documents", { id: 'kyc-upload' });
+        } finally {
+            setIsLoading(false);
         }
     };
 

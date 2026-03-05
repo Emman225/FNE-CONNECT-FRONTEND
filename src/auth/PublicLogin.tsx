@@ -4,7 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { ArrowRight, ShieldCheck, AlertCircle } from 'lucide-react';
 
 import Input from '../components/ui/Input';
-import InputPassword from '../components/forms/InputPassword';
+import Button from '../components/ui/Button';
 import SplitAuthLayout from '../layouts/SplitAuthLayout';
 import { useAuth } from './AuthProvider';
 import { userRoles, isAdminRole } from '../types/roles';
@@ -16,12 +16,26 @@ import { userRoles, isAdminRole } from '../types/roles';
  * Redirects to /dashboard on successful login.
  */
 const PublicLogin = () => {
-    const { login } = useAuth();
+    const { user, login } = useAuth();
     const navigate = useNavigate();
+
+    // Redirection if already logged in
+    React.useEffect(() => {
+        if (user) {
+            if (user.role === userRoles.VENDOR) {
+                navigate('/dashboard');
+            } else if (isAdminRole(user.role)) {
+                navigate('/admin/dashboard');
+            }
+        }
+    }, [user, navigate]);
+
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+
+    if (user) return null;
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
@@ -69,7 +83,7 @@ const PublicLogin = () => {
                         <img src={logo} alt="FNE Connect" style={{ width: '100%', height: '100%', objectFit: 'contain', mixBlendMode: 'multiply' }} />
                     </div>
                 </div>
-                <p style={{ color: 'var(--text-secondary)' }}>
+                <p style={{ color: 'var(--color-text-secondary)' }}>
                     Connectez-vous pour accéder à votre espace.
                 </p>
             </div>
@@ -85,8 +99,9 @@ const PublicLogin = () => {
                 />
 
                 <div>
-                    <InputPassword
+                    <Input
                         label="Mot de passe"
+                        type="password"
                         placeholder="Votre mot de passe"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
@@ -98,8 +113,8 @@ const PublicLogin = () => {
                             marginTop: '1rem',
                             padding: '0.75rem',
                             borderRadius: 'var(--radius-md)',
-                            backgroundColor: 'var(--danger-light)',
-                            color: 'var(--danger)',
+                            backgroundColor: 'var(--color-error-50)',
+                            color: 'var(--color-error-700)',
                             fontSize: '0.875rem',
                             display: 'flex',
                             alignItems: 'center',
@@ -117,15 +132,15 @@ const PublicLogin = () => {
                             gap: '0.5rem',
                             fontSize: '0.875rem',
                             cursor: 'pointer',
-                            color: 'var(--text-secondary)'
+                            color: 'var(--color-text-secondary)'
                         }}>
-                            <input type="checkbox" style={{ accentColor: 'var(--primary)' }} />
+                            <input type="checkbox" style={{ accentColor: 'var(--color-primary)' }} />
                             Se souvenir de moi
                         </label>
                         <Link to="/auth/forgot-password" style={{
                             fontSize: '0.875rem',
                             fontWeight: '500',
-                            color: 'var(--primary)',
+                            color: 'var(--color-primary)',
                             textDecoration: 'none'
                         }}>
                             Mot de passe oublié ?
@@ -133,18 +148,19 @@ const PublicLogin = () => {
                     </div>
                 </div>
 
-                <button
+                <Button
                     type="submit"
                     disabled={loading}
-                    className="btn btn-primary"
-                    style={{ width: '100%', padding: '0.875rem', marginTop: '0.5rem' }}
+                    loading={loading}
+                    variant="solid"
+                    color="primary"
+                    size="lg"
+                    fullWidth
+                    rightIcon={!loading && <ArrowRight size={18} />}
+                    style={{ marginTop: '0.5rem' }}
                 >
-                    {loading ? 'Connexion en cours...' : (
-                        <>
-                            Se connecter <ArrowRight size={18} />
-                        </>
-                    )}
-                </button>
+                    Se connecter
+                </Button>
             </form>
 
             <div style={{
@@ -152,7 +168,7 @@ const PublicLogin = () => {
                 textAlign: 'center',
                 fontSize: '0.9rem',
                 paddingTop: '1.5rem',
-                borderTop: '1px solid var(--border-color)',
+                borderTop: '1px solid var(--color-border)',
                 display: 'flex',
                 flexDirection: 'column',
                 gap: '1rem'
@@ -161,7 +177,7 @@ const PublicLogin = () => {
                     Pas encore de compte ? {' '}
                     <Link to="/auth/register" style={{
                         fontWeight: '600',
-                        color: 'var(--primary)',
+                        color: 'var(--color-primary)',
                         textDecoration: 'none'
                     }}>
                         Créer un compte
@@ -170,7 +186,7 @@ const PublicLogin = () => {
 
                 <div style={{
                     fontSize: '0.75rem',
-                    color: 'var(--text-light)',
+                    color: 'var(--color-text-tertiary)',
                     marginTop: '0.5rem'
                 }}>
                     © 2025 FNE Connect. Tous droits réservés.

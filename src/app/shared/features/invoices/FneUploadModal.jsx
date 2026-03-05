@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Upload, FileText, CheckCircle } from 'lucide-react';
 import Button from '../../../../components/ui/Button';
 import { useNotifications } from '../../../../context/NotificationContext';
+import { invoiceService } from '../../../../services/invoiceService';
 
 const FneUploadModal = ({ isOpen, onClose, invoice, onUploadSuccess }) => {
     const [file, setFile] = useState(null);
@@ -27,14 +28,18 @@ const FneUploadModal = ({ isOpen, onClose, invoice, onUploadSuccess }) => {
         }
 
         setIsUploading(true);
-        // Simulate API call
-        setTimeout(() => {
-            setIsUploading(false);
-            showSuccess(`Facture FNE pour ${invoice.number} téléversée avec succès !`);
+        try {
+            await invoiceService.uploadFnePdf(invoice.id, file);
+            showSuccess(`Facture FNE officielle pour ${invoice.invoiceNumber || invoice.number} téléversée avec succès !`);
             if (onUploadSuccess) onUploadSuccess(invoice.id);
-            onClose();
             setFile(null);
-        }, 2000);
+            onClose();
+        } catch (error) {
+            console.error("Upload failed", error);
+            showError("Erreur lors du téléversement du fichier.");
+        } finally {
+            setIsUploading(false);
+        }
     };
 
     return (

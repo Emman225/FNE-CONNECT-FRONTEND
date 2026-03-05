@@ -1,11 +1,10 @@
-// Role constants
 export const userRoles = {
-    VENDOR: 'VENDOR',
-    ADMIN: 'ADMIN',
-    COMPLIANCE: 'COMPLIANCE',
-    FINANCE: 'FINANCE',
-    SUPPORT: 'SUPPORT',
-    AUDITOR: 'AUDITOR'
+    VENDOR: 'vendor',
+    ADMIN: 'admin',
+    COMPLIANCE: 'compliance',
+    FINANCE: 'finance',
+    SUPPORT: 'support',
+    AUDITOR: 'auditor'
 } as const;
 
 export type UserRole = typeof userRoles[keyof typeof userRoles];
@@ -46,6 +45,8 @@ export const menuKeys = {
     CONFIGURATION: 'CONFIGURATION',
     REPORTING_GLOBAL: 'REPORTING_GLOBAL',
     VERIFICATION_FNE: 'VERIFICATION_FNE',
+    AUDIT_LOGS: 'AUDIT_LOGS',
+    SECURITY_SETTINGS: 'SECURITY_SETTINGS',
 
     // SETTINGS (accessible to all)
     SETTINGS: 'SETTINGS'
@@ -104,6 +105,8 @@ export const rolePermissions: Record<UserRole, MenuKey[]> = {
         menuKeys.CONFIGURATION,
         menuKeys.REPORTING_GLOBAL,
         menuKeys.VERIFICATION_FNE,
+        menuKeys.AUDIT_LOGS,
+        menuKeys.SECURITY_SETTINGS,
         menuKeys.SETTINGS
     ],
 
@@ -148,6 +151,7 @@ export const rolePermissions: Record<UserRole, MenuKey[]> = {
         menuKeys.GESTION_VENDEURS,
         menuKeys.CONFIGURATION,
         menuKeys.REPORTING_GLOBAL,
+        menuKeys.AUDIT_LOGS,
         menuKeys.SETTINGS
     ]
 };

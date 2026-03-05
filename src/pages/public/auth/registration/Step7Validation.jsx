@@ -2,15 +2,28 @@ import React, { useEffect, useState } from 'react';
 import { CheckCircle, ArrowRight, Copy } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import toast from 'react-hot-toast';
+import { vendorService } from '../../../../services/vendorService';
 
 const Step7Validation = () => {
     const navigate = useNavigate();
     const [accountNumber, setAccountNumber] = useState('');
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
-        // Generate a random unique account number
-        const randomId = Math.floor(10000000 + Math.random() * 90000000);
-        setAccountNumber(`FNE-${randomId}`);
+        const fetchVendorId = async () => {
+            try {
+                const profile = await vendorService.getProfile();
+                // Assume vendor account number is the RNE or a specific field
+                setAccountNumber(profile.rne_number || `FNE-${profile.id?.toString().padStart(6, '0')}`);
+            } catch (error) {
+                console.error("Failed to fetch vendor profile", error);
+                const randomId = Math.floor(10000000 + Math.random() * 90000000);
+                setAccountNumber(`FNE-${randomId}`);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchVendorId();
     }, []);
 
     const copyToClipboard = () => {

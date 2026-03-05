@@ -145,27 +145,42 @@ const AddVendorModal = ({ isOpen, onClose, onSave, vendor = null }) => {
             }}>
                 {/* Header */}
                 <div style={{
-                    padding: '1.5rem',
+                    padding: '1.25rem 2rem',
                     borderBottom: '1px solid var(--border-color)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     backgroundColor: 'var(--secondary)',
-                    color: 'white'
+                    position: 'sticky',
+                    top: 0,
+                    zIndex: 10
                 }}>
-                    <h2 style={{ fontSize: '1.25rem', fontWeight: '700', margin: 0, color: 'white' }}>
+                    <h2 style={{ fontSize: '1.25rem', fontWeight: '800', margin: 0, color: 'white', letterSpacing: '-0.025em' }}>
                         {vendor ? 'Modifier le Vendeur' : 'Ajouter un Vendeur'}
                     </h2>
                     <button
                         onClick={onClose}
                         style={{
-                            background: 'none',
+                            background: 'rgba(255, 255, 255, 0.15)',
                             border: 'none',
                             cursor: 'pointer',
-                            color: 'white'
+                            color: 'white',
+                            width: '36px',
+                            height: '36px',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.2s'
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.25)';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.15)';
                         }}
                     >
-                        <X size={24} />
+                        <X size={20} />
                     </button>
                 </div>
 
